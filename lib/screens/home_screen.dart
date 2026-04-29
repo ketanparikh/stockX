@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../theme/app_colors.dart';
+import '../providers/theme_provider.dart';
 import 'screener_screen.dart';
 import 'watchlist_screen.dart';
 
@@ -21,23 +21,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = ref.watch(themeModeProvider.notifier).isDark;
+    final scheme = Theme.of(context).colorScheme;
+    final surfaceColor = Theme.of(context).appBarTheme.backgroundColor ??
+        Theme.of(context).colorScheme.surface;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            top: BorderSide(color: AppColors.divider),
+            top: BorderSide(
+              color: Theme.of(context).dividerColor,
+            ),
           ),
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (i) => setState(() => _currentIndex = i),
-          backgroundColor: AppColors.surface,
-          selectedItemColor: AppColors.primary,
-          unselectedItemColor: AppColors.textMuted,
+          backgroundColor: surfaceColor,
+          selectedItemColor: scheme.primary,
+          unselectedItemColor: Theme.of(context).textTheme.bodySmall?.color,
           selectedLabelStyle: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
@@ -56,6 +63,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               label: 'Watchlist',
             ),
           ],
+        ),
+      ),
+      // Floating theme toggle button — bottom-right corner
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+        backgroundColor: scheme.primary,
+        foregroundColor: Colors.white,
+        tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+        child: Icon(
+          isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+          size: 18,
         ),
       ),
     );
