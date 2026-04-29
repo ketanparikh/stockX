@@ -3,71 +3,77 @@ import '../models/indicator_result.dart';
 import '../models/screener_filter.dart';
 import 'indicator_utils.dart';
 
-/// Chandelier Exit (Alex Elder).
-///
-/// Standard formula:
-///   Long Stop  = Highest High(period) − multiplier × ATR(period)
-///   Short Stop = Lowest  Low (period) + multiplier × ATR(period)
-///
-/// ATR here is a SIMPLE average of True Range over [period] bars — this
-/// matches the original definition and avoids Wilder lag distorting the exit.
-///
-/// Signal:
-///   close > Long Stop  → BUY  (price is above the long exit, trend intact)
-///   close < Short Stop → SELL (price is below the short exit, trend intact)
-///   otherwise          → NEUTRAL
-///
-/// Note: A full state-machine version would track the prior state and only
-/// signal when a level is crossed. For a screener "current status" view, the
-/// stateless version below is standard practice.
 class ChandelierExitIndicator {
+  static const int _kHistoryLen = 50;
+
   static ChandelierResult? calculate(
     List<CandleData> candles,
     ChandelierFilterParams params,
   ) {
     if (candles.length < params.period + 1) return null;
 
-    // Simple ATR over the lookback window
     final atrList = IndicatorUtils.simpleAtr(candles, params.period);
     if (atrList.isEmpty) return null;
 
-    final currentAtr = atrList.last;
-    final currentClose = candles.last.close;
+    // Build signal series for the last _kHistoryLen bars
+    final signalHistory = <SignalType>[];
+    final histStart = atrList.length > _kHistoryLen
+        ? atrList.length - _kHistoryLen
+        : 0;
 
-    // Highest high and lowest low over the last [period] candles
-    final window = candles.sublist(candles.length - params.period);
-    final highestHigh = window.map((c) => c.high).reduce((a, b) => a > b ? a : b);
-    final lowestLow  = window.map((c) => c.low ).reduce((a, b) => a < b ? a : b);
+    // atrList[k] corresponds to candles[period + k]
+    for (int k = histStart; k < atrList.length; k++) {
+      final barIdx = params.period + k; // candle index
+      if (barIdx >= candles.length) break;
 
-    final longStop  = highestHigh - params.multiplier * currentAtr;
-    final shortStop = lowestLow   + params.multiplier * currentAtr;
+      final atr = atrList[k];
+      final close = candles[barIdx].close;
 
-    final SignalType signal;
-    if (currentClose > longStop) {
-      signal = SignalType.buy;
-    } else if (currentClose < shortStop) {
-      signal = SignalType.sell;
-    } else {
-      signal = SignalType.neutral;
+      // Window for highest high / lowest low: [barIdx-period+1 .. barIdx]
+      final winStart = (barIdx - params.period + 1).clamp(0, candles.length - 1);
+      final window = candles.sublist(winStart, barIdx + 1);
+      final highestHigh = window.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+      final lowestLow   = window.map((c) => c.low ).reduce((a, b) => a < b ? a : b);
+
+      final longStop  = highestHigh - params.multiplier * atr;
+      final shortStop = lowestLow   + params.multiplier * atr;
+
+      if (close > longStop) {
+        signalHistory.add(SignalType.buy);
+      } else if (close < shortStop) {
+        signalHistory.add(SignalType.sell);
+      } else {
+        signalHistory.add(SignalType.neutral);
+      }
     }
 
+    if (signalHistory.isEmpty) return null;
+
+    final age = IndicatorUtils.signalAge(signalHistory);
+    final currentSignal = signalHistory.last;
+
+    // For the result values use the last bar's stops
+    final lastAtr = atrList.last;
+    final lastBar = candles.length - 1;
+    final winStart = (lastBar - params.period + 1).clamp(0, candles.length - 1);
+    final lastWindow = candles.sublist(winStart);
+    final hh = lastWindow.map((c) => c.high).reduce((a, b) => a > b ? a : b);
+    final ll = lastWindow.map((c) => c.low ).reduce((a, b) => a < b ? a : b);
+
     return ChandelierResult(
-      longStop: longStop,
-      shortStop: shortStop,
-      signal: signal,
+      longStop:  hh - params.multiplier * lastAtr,
+      shortStop: ll + params.multiplier * lastAtr,
+      signal: currentSignal,
+      signalAge: age,
     );
   }
 
   static bool matchesFilter(ChandelierResult result, ChandelierFilterParams params) {
     switch (params.signal) {
-      case 'BUY':
-        return result.signal == SignalType.buy;
-      case 'SELL':
-        return result.signal == SignalType.sell;
-      case 'NEUTRAL':
-        return result.signal == SignalType.neutral;
-      default:
-        return true;
+      case 'BUY':     return result.signal == SignalType.buy;
+      case 'SELL':    return result.signal == SignalType.sell;
+      case 'NEUTRAL': return result.signal == SignalType.neutral;
+      default:        return true;
     }
   }
 }

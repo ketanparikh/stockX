@@ -216,14 +216,23 @@ class ScreenerService {
   bool _passesFilter(ScreenerResult result, ScreenerFilter filter) {
     if (!filter.hasAnyFilter) return true;
 
-    if (filter.requireAllFilters) {
-      // ALL enabled indicators must match (and at least one must exist)
-      return result.totalFilters > 0 &&
-          result.matchingFilters == result.totalFilters;
-    } else {
-      // AT LEAST ONE indicator must match
-      return result.matchingFilters > 0;
+    final signalOk = filter.requireAllFilters
+        ? result.totalFilters > 0 && result.matchingFilters == result.totalFilters
+        : result.matchingFilters > 0;
+
+    if (!signalOk) return false;
+
+    // Fresh-signal gate: every MATCHING indicator must have fired within
+    // the configured look-back window.
+    if (filter.requireFreshSignal) {
+      final matchingIndicators = result.indicators
+          .where((ind) => _indicatorMatchesFilter(ind, filter));
+      final allFresh = matchingIndicators
+          .every((ind) => ind.isFresh(filter.freshSignalMaxBars));
+      if (!allFresh) return false;
     }
+
+    return true;
   }
 
   // Compute all indicators for a single stock (for detail view)

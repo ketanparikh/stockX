@@ -50,9 +50,49 @@ class IndicatorTile extends StatelessWidget {
               ],
             ),
           ),
-          SignalBadge(signal: indicator.signal, fontSize: compact ? 10 : 11),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              SignalBadge(signal: indicator.signal, fontSize: compact ? 10 : 11),
+              const SizedBox(height: 4),
+              _SignalAgeBadge(age: indicator.signalAge, compact: compact),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _SignalAgeBadge extends StatelessWidget {
+  final int age;
+  final bool compact;
+
+  const _SignalAgeBadge({required this.age, required this.compact});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, label) = age == 0
+        ? (AppColors.bullish, 'Today')
+        : age <= 3
+            ? (AppColors.neutral, '${age}d ago')
+            : (AppColors.textMuted, '${age}d ago');
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.access_time_rounded, size: compact ? 9 : 10, color: color),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: compact ? 9 : 10,
+            fontWeight: age == 0 ? FontWeight.w700 : FontWeight.w400,
+          ),
+        ),
+      ],
     );
   }
 }

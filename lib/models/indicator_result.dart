@@ -8,6 +8,12 @@ class IndicatorResult {
   final SignalType signal;
   final String description;
 
+  /// How many bars ago this signal was first triggered.
+  /// 0 = triggered on the most recent (today's) bar.
+  /// 1 = triggered yesterday, still active today.
+  /// N = has been continuously active for N+1 bars.
+  final int signalAge;
+
   const IndicatorResult({
     required this.name,
     this.value,
@@ -15,30 +21,39 @@ class IndicatorResult {
     this.value3,
     required this.signal,
     required this.description,
+    this.signalAge = 0,
   });
 
   bool get isBuy => signal == SignalType.buy;
   bool get isSell => signal == SignalType.sell;
   bool get isNeutral => signal == SignalType.neutral;
+
+  /// Human-readable age label, e.g. "Today", "1 bar ago", "3 bars ago".
+  String get signalAgeLabel {
+    if (signalAge == 0) return 'Today';
+    if (signalAge == 1) return '1 bar ago';
+    return '$signalAge bars ago';
+  }
+
+  bool isFresh(int maxBars) => signalAge <= maxBars;
 }
 
 class RsiResult extends IndicatorResult {
-  /// The fast (primary) RSI value, corresponding to [RsiFilterParams.period].
   final double fastRsi;
-
-  /// The slow RSI value when dual-RSI mode is active; null otherwise.
   final double? slowRsi;
 
   RsiResult({
     required this.fastRsi,
     this.slowRsi,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: 'RSI',
           value: fastRsi,
           value2: slowRsi,
           signal: signal,
           description: _buildDescription(fastRsi, slowRsi, signal),
+          signalAge: signalAge,
         );
 
   static String _buildDescription(
@@ -65,11 +80,13 @@ class SupertrendResult extends IndicatorResult {
     required double supertrendValue,
     required this.isBullish,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: 'Supertrend',
           value: supertrendValue,
           signal: signal,
           description: isBullish ? 'Bullish Trend' : 'Bearish Trend',
+          signalAge: signalAge,
         );
 }
 
@@ -78,6 +95,7 @@ class ChandelierResult extends IndicatorResult {
     required double longStop,
     required double shortStop,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: 'Chandelier Exit',
           value: longStop,
@@ -88,6 +106,7 @@ class ChandelierResult extends IndicatorResult {
               : signal == SignalType.sell
                   ? 'Below Short Stop'
                   : 'Between Stops',
+          signalAge: signalAge,
         );
 }
 
@@ -97,6 +116,7 @@ class MacdResult extends IndicatorResult {
     required double signalLine,
     required double histogram,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: 'MACD',
           value: macdLine,
@@ -108,6 +128,7 @@ class MacdResult extends IndicatorResult {
               : signal == SignalType.sell
                   ? 'Bearish Crossover'
                   : 'No Crossover',
+          signalAge: signalAge,
         );
 }
 
@@ -117,6 +138,7 @@ class EmaResult extends IndicatorResult {
     required double fastEma,
     required double slowEma,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: label,
           value: fastEma,
@@ -127,6 +149,7 @@ class EmaResult extends IndicatorResult {
               : signal == SignalType.sell
                   ? 'Fast < Slow (Bearish)'
                   : 'Converging',
+          signalAge: signalAge,
         );
 }
 
@@ -137,6 +160,7 @@ class BollingerResult extends IndicatorResult {
     required double lower,
     required double close,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: 'Bollinger Bands',
           value: upper,
@@ -148,6 +172,7 @@ class BollingerResult extends IndicatorResult {
               : signal == SignalType.sell
                   ? 'Near Upper Band (Potential Reversal)'
                   : 'Within Bands',
+          signalAge: signalAge,
         );
 }
 
@@ -157,6 +182,7 @@ class AdxResult extends IndicatorResult {
     required double plusDi,
     required double minusDi,
     required SignalType signal,
+    int signalAge = 0,
   }) : super(
           name: 'ADX',
           value: adx,
@@ -168,5 +194,6 @@ class AdxResult extends IndicatorResult {
                   ? 'Strong Uptrend (ADX: ${adx.toStringAsFixed(1)})'
                   : 'Strong Downtrend (ADX: ${adx.toStringAsFixed(1)})'
               : 'Weak Trend (ADX: ${adx.toStringAsFixed(1)})',
+          signalAge: signalAge,
         );
 }

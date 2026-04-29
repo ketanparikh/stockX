@@ -64,6 +64,12 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 ),
               ),
               SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _buildFreshSignalSection(filter),
+                ),
+              ),
+              SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 sliver: SliverToBoxAdapter(
                   child: _buildSectionHeader('Technical Indicators'),
@@ -380,6 +386,172 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // ── Fresh Signals ──────────────────────────────────────────────────────────
+
+  Widget _buildFreshSignalSection(ScreenerFilter filter) {
+    final notifier = ref.read(screenerFilterProvider.notifier);
+    final active = filter.requireFreshSignal;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: active ? AppColors.card : AppColors.surfaceVariant,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: active ? AppColors.accent.withOpacity(0.5) : AppColors.border,
+          width: active ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? AppColors.accent.withOpacity(0.15)
+                        : AppColors.border.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.bolt_rounded,
+                    size: 18,
+                    color: active ? AppColors.accent : AppColors.textMuted,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Fresh Signals Only',
+                        style: TextStyle(
+                          color: active
+                              ? AppColors.textPrimary
+                              : AppColors.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        active
+                            ? 'Signal must have triggered within ${filter.freshSignalMaxBars} bar${filter.freshSignalMaxBars == 1 ? '' : 's'}'
+                            : 'Find stocks where conditions just triggered',
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: active,
+                  onChanged: notifier.setRequireFreshSignal,
+                  activeColor: AppColors.accent,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+          ),
+          if (active) ...[
+            const Divider(height: 1, color: AppColors.divider),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Signal triggered within',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          filter.freshSignalMaxBars == 0
+                              ? 'Today only'
+                              : '${filter.freshSignalMaxBars} bar${filter.freshSignalMaxBars == 1 ? '' : 's'} ago',
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(trackHeight: 3),
+                    child: Slider(
+                      value: filter.freshSignalMaxBars.toDouble(),
+                      min: 0,
+                      max: 10,
+                      divisions: 10,
+                      activeColor: AppColors.accent,
+                      onChanged: (v) =>
+                          notifier.setFreshSignalMaxBars(v.toInt()),
+                    ),
+                  ),
+                  // Quick-select chips
+                  Wrap(
+                    spacing: 6,
+                    children: [0, 1, 3, 5, 10].map((days) {
+                      final sel = filter.freshSignalMaxBars == days;
+                      return GestureDetector(
+                        onTap: () => notifier.setFreshSignalMaxBars(days),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 120),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? AppColors.accent.withOpacity(0.15)
+                                : AppColors.surfaceVariant,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: sel ? AppColors.accent : AppColors.border,
+                            ),
+                          ),
+                          child: Text(
+                            days == 0 ? 'Today' : '≤ $days bar${days == 1 ? '' : 's'}',
+                            style: TextStyle(
+                              color:
+                                  sel ? AppColors.accent : AppColors.textMuted,
+                              fontSize: 11,
+                              fontWeight: sel
+                                  ? FontWeight.w700
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

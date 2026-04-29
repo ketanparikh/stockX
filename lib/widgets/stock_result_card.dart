@@ -246,20 +246,46 @@ class StockResultCard extends ConsumerWidget {
       chipColor = AppColors.neutral;
     }
 
+    // Age label — highlight "Today" triggers specially
+    final int age = indicator.signalAge;
+    final String ageLabel = age == 0 ? '⚡ Today' : '${age}d';
+    final Color ageColor = age == 0
+        ? AppColors.bullish
+        : age <= 3
+            ? AppColors.neutral
+            : AppColors.textMuted;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: chipColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: chipColor.withOpacity(0.3)),
-      ),
-      child: Text(
-        indicator.name,
-        style: TextStyle(
-          color: chipColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
+        border: Border.all(
+          color: age == 0 ? chipColor.withOpacity(0.6) : chipColor.withOpacity(0.3),
+          width: age == 0 ? 1.5 : 1,
         ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            indicator.name,
+            style: TextStyle(
+              color: chipColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            ageLabel,
+            style: TextStyle(
+              color: ageColor,
+              fontSize: 9,
+              fontWeight: age == 0 ? FontWeight.w700 : FontWeight.w400,
+            ),
+          ),
+        ],
       ),
     );
   }

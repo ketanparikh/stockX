@@ -88,6 +88,29 @@ class IndicatorUtils {
     return sma(tr, period);
   }
 
+  /// Counts how many consecutive bars (starting from the last) share the
+  /// same signal state, then subtracts 1 to get the "age".
+  ///
+  /// Age 0 → signal started on the most recent bar (today).
+  /// Age N → signal has been continuously active for N+1 bars.
+  ///
+  /// [signals] must have at least one element.
+  /// [maxLookback] caps the scan so we never walk further back than needed.
+  static int signalAge<T>(List<T> signals, {int maxLookback = 50}) {
+    if (signals.isEmpty) return 0;
+    final current = signals.last;
+    int age = 0;
+    final limit = signals.length - 1;
+    for (int i = limit - 1; i >= 0 && age < maxLookback; i--) {
+      if (signals[i] == current) {
+        age++;
+      } else {
+        break;
+      }
+    }
+    return age;
+  }
+
   /// Population standard deviation.
   static double stdDev(List<double> values) {
     if (values.isEmpty) return 0;

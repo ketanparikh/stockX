@@ -285,6 +285,14 @@ class ScreenerFilter {
   final AdxFilterParams adxParams;
   final bool requireAllFilters;
 
+  /// When true, only include stocks where ALL matching indicators
+  /// triggered within the last [freshSignalMaxBars] bars.
+  final bool requireFreshSignal;
+
+  /// Maximum signal age (in bars) for fresh signal mode.
+  /// 0 = only today's new signals, 3 = triggered within last 3 bars, etc.
+  final int freshSignalMaxBars;
+
   const ScreenerFilter({
     this.markets = const {'NSE'},
     this.sectors = const {},
@@ -304,6 +312,8 @@ class ScreenerFilter {
     this.useAdx = false,
     this.adxParams = const AdxFilterParams(),
     this.requireAllFilters = true,
+    this.requireFreshSignal = false,
+    this.freshSignalMaxBars = 3,
   });
 
   bool get hasAnyFilter =>
@@ -340,6 +350,8 @@ class ScreenerFilter {
     bool? useAdx,
     AdxFilterParams? adxParams,
     bool? requireAllFilters,
+    bool? requireFreshSignal,
+    int? freshSignalMaxBars,
   }) =>
       ScreenerFilter(
         markets: markets ?? this.markets,
@@ -360,5 +372,7 @@ class ScreenerFilter {
         useAdx: useAdx ?? this.useAdx,
         adxParams: adxParams ?? this.adxParams,
         requireAllFilters: requireAllFilters ?? this.requireAllFilters,
+        requireFreshSignal: requireFreshSignal ?? this.requireFreshSignal,
+        freshSignalMaxBars: freshSignalMaxBars ?? this.freshSignalMaxBars,
       );
 }

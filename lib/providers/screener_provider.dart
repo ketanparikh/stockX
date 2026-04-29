@@ -109,6 +109,14 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
     state = state.copyWith(requireAllFilters: value);
   }
 
+  void setRequireFreshSignal(bool value) {
+    state = state.copyWith(requireFreshSignal: value);
+  }
+
+  void setFreshSignalMaxBars(int bars) {
+    state = state.copyWith(freshSignalMaxBars: bars);
+  }
+
   void reset() {
     state = const ScreenerFilter();
   }
