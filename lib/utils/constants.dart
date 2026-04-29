@@ -1,0 +1,55 @@
+class AppConstants {
+  static const String appName = 'StockX Screener';
+  static const String yahooFinanceBaseUrl = 'https://query1.finance.yahoo.com';
+  static const String yahooFinanceChartPath = '/v8/finance/chart';
+  static const String yahooFinanceQuotePath = '/v7/finance/quote';
+
+  static const Duration requestTimeout = Duration(seconds: 15);
+  static const int defaultRsiPeriod = 14;
+  static const int defaultEmaPeriod = 20;
+  static const int defaultMacdFastPeriod = 12;
+  static const int defaultMacdSlowPeriod = 26;
+  static const int defaultMacdSignalPeriod = 9;
+  static const int defaultSupertrendPeriod = 10;
+  static const double defaultSupertrendMultiplier = 3.0;
+  static const int defaultChandelierPeriod = 22;
+  static const double defaultChandelierMultiplier = 3.0;
+  static const int defaultAtrPeriod = 14;
+  static const int defaultBollingerPeriod = 20;
+  static const double defaultBollingerStdDev = 2.0;
+  static const int defaultAdxPeriod = 14;
+
+  static const int maxCandlesForIndicators = 300;
+}
+
+class StockMarket {
+  static const String nse = 'NSE';
+  static const String bse = 'BSE';
+  static const String us = 'US';
+}
+
+class Timeframe {
+  static const String daily = '1d';
+  static const String weekly = '1wk';
+  static const String monthly = '1mo';
+
+  static String label(String tf) {
+    switch (tf) {
+      case daily:
+        return 'Daily';
+      case weekly:
+        return 'Weekly';
+      case monthly:
+        return 'Monthly';
+      default:
+        return tf;
+    }
+  }
+}
+
+class FilterSignal {
+  static const String buy = 'BUY';
+  static const String sell = 'SELL';
+  static const String neutral = 'NEUTRAL';
+  static const String any = 'ANY';
+}
