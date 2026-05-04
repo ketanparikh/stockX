@@ -5,16 +5,18 @@ class AppConstants {
   static const String yahooFinanceQuotePath = '/v7/finance/quote';
 
   static const Duration requestTimeout = Duration(seconds: 15);
-  static const int defaultRsiPeriod = 14;
+  static const int defaultRsiPeriod = 25;
+  static const int defaultRsiSlowPeriod = 100;
   static const int defaultEmaPeriod = 20;
   static const int defaultMacdFastPeriod = 12;
   static const int defaultMacdSlowPeriod = 26;
   static const int defaultMacdSignalPeriod = 9;
-  static const int defaultSupertrendPeriod = 10;
+  static const int defaultSupertrendPeriod = 22;
   static const double defaultSupertrendMultiplier = 3.0;
   static const int defaultChandelierPeriod = 22;
   static const double defaultChandelierMultiplier = 3.0;
-  static const int defaultAtrPeriod = 14;
+  static const int defaultAtrPeriod = 22;
+  static const int defaultMaxResults = 100;
   static const int defaultBollingerPeriod = 20;
   static const double defaultBollingerStdDev = 2.0;
   static const int defaultAdxPeriod = 14;

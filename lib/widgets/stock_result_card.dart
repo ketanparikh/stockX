@@ -16,6 +16,8 @@ class StockResultCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
     final quote = result.quote;
     final isWatched = ref.watch(watchlistProvider).contains(quote.symbol);
     final isPositive = quote.isPositive;
@@ -25,20 +27,18 @@ class StockResultCard extends ConsumerWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: c.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Symbol + Name
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,24 +47,23 @@ class StockResultCard extends ConsumerWidget {
                           children: [
                             Text(
                               quote.symbol,
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
+                              style: TextStyle(
+                                color: c.textPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.15),
+                                color: scheme.primary.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 quote.market,
-                                style: const TextStyle(
-                                  color: AppColors.primaryLight,
+                                style: TextStyle(
+                                  color: scheme.primary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -75,25 +74,15 @@ class StockResultCard extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           quote.name,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 12,
-                          ),
+                          style: TextStyle(color: c.textSecondary, fontSize: 12),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          quote.sector,
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 11,
-                          ),
-                        ),
+                        Text(quote.sector, style: TextStyle(color: c.textMuted, fontSize: 11)),
                       ],
                     ),
                   ),
-                  // Price info
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -101,25 +90,24 @@ class StockResultCard extends ConsumerWidget {
                         children: [
                           IconButton(
                             onPressed: () {
-                              ref.read(watchlistProvider.notifier).toggle(quote.symbol);
+                              ref
+                                  .read(watchlistEntriesProvider.notifier)
+                                  .toggle(quote.symbol, result.indicators);
                             },
                             icon: Icon(
                               isWatched ? Icons.bookmark : Icons.bookmark_outline,
-                              color: isWatched
-                                  ? AppColors.primary
-                                  : AppColors.textMuted,
+                              color: isWatched ? scheme.primary : c.textMuted,
                               size: 18,
                             ),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                                minWidth: 28, minHeight: 28),
+                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                           ),
                         ],
                       ),
                       Text(
                         _formatPrice(quote.price, quote.market),
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          color: c.textPrimary,
                           fontSize: 17,
                           fontWeight: FontWeight.w700,
                         ),
@@ -129,20 +117,14 @@ class StockResultCard extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isPositive
-                                ? Icons.arrow_drop_up
-                                : Icons.arrow_drop_down,
-                            color: isPositive
-                                ? AppColors.bullish
-                                : AppColors.bearish,
+                            isPositive ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                            color: isPositive ? AppColors.bullish : AppColors.bearish,
                             size: 16,
                           ),
                           Text(
                             '${isPositive ? '+' : ''}${quote.changePercent.toStringAsFixed(2)}%',
                             style: TextStyle(
-                              color: isPositive
-                                  ? AppColors.bullish
-                                  : AppColors.bearish,
+                              color: isPositive ? AppColors.bullish : AppColors.bearish,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -154,11 +136,7 @@ class StockResultCard extends ConsumerWidget {
                 ],
               ),
             ),
-
-            // Divider
-            const Divider(height: 1, color: AppColors.divider),
-
-            // Match score + indicators
+            Divider(height: 1, color: c.divider),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: Column(
@@ -170,10 +148,7 @@ class StockResultCard extends ConsumerWidget {
                       const Spacer(),
                       Text(
                         '${result.matchingFilters}/${result.totalFilters} filters match',
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: c.textMuted, fontSize: 11),
                       ),
                     ],
                   ),
@@ -182,9 +157,7 @@ class StockResultCard extends ConsumerWidget {
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
-                      children: result.indicators
-                          .map((ind) => _buildIndicatorChip(ind))
-                          .toList(),
+                      children: result.indicators.map((ind) => _buildIndicatorChip(ind)).toList(),
                     ),
                   ],
                 ],
@@ -207,29 +180,18 @@ class StockResultCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
+          Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 5),
           Text(
             '${(score * 100).toInt()}% match',
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -246,22 +208,21 @@ class StockResultCard extends ConsumerWidget {
       chipColor = AppColors.neutral;
     }
 
-    // Age label — highlight "Today" triggers specially
     final int age = indicator.signalAge;
     final String ageLabel = age == 0 ? '⚡ Today' : '${age}d';
     final Color ageColor = age == 0
         ? AppColors.bullish
         : age <= 3
             ? AppColors.neutral
-            : AppColors.textMuted;
+            : const Color(0xFF8888A0);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: chipColor.withOpacity(0.1),
+        color: chipColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
-          color: age == 0 ? chipColor.withOpacity(0.6) : chipColor.withOpacity(0.3),
+          color: age == 0 ? chipColor.withValues(alpha: 0.6) : chipColor.withValues(alpha: 0.3),
           width: age == 0 ? 1.5 : 1,
         ),
       ),
@@ -270,11 +231,7 @@ class StockResultCard extends ConsumerWidget {
         children: [
           Text(
             indicator.name,
-            style: TextStyle(
-              color: chipColor,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: chipColor, fontSize: 11, fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 4),
           Text(
@@ -291,9 +248,7 @@ class StockResultCard extends ConsumerWidget {
   }
 
   String _formatPrice(double price, String market) {
-    if (market == 'NSE' || market == 'BSE') {
-      return '₹${price.toStringAsFixed(2)}';
-    }
+    if (market == 'NSE' || market == 'BSE') return '₹${price.toStringAsFixed(2)}';
     return '\$${price.toStringAsFixed(2)}';
   }
 }

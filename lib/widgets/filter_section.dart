@@ -21,20 +21,21 @@ class FilterSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: enabled ? AppColors.card : AppColors.surfaceVariant,
+        color: enabled ? c.card : c.surfaceVariant,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: enabled ? AppColors.primary.withOpacity(0.4) : AppColors.border,
+          color: enabled ? scheme.primary.withValues(alpha: 0.4) : c.border,
           width: enabled ? 1.5 : 1,
         ),
       ),
       child: Column(
         children: [
-          // Header row
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
             child: Row(
@@ -44,14 +45,14 @@ class FilterSection extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: enabled
-                        ? AppColors.primary.withOpacity(0.15)
-                        : AppColors.border.withOpacity(0.5),
+                        ? scheme.primary.withValues(alpha: 0.15)
+                        : c.border.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
                     size: 18,
-                    color: enabled ? AppColors.primaryLight : AppColors.textMuted,
+                    color: enabled ? scheme.primary : c.textMuted,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -62,17 +63,14 @@ class FilterSection extends StatelessWidget {
                       Text(
                         title,
                         style: TextStyle(
-                          color: enabled ? AppColors.textPrimary : AppColors.textSecondary,
+                          color: enabled ? c.textPrimary : c.textSecondary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         description,
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: c.textMuted, fontSize: 11),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -82,15 +80,14 @@ class FilterSection extends StatelessWidget {
                 Switch(
                   value: enabled,
                   onChanged: onToggle,
-                  activeColor: AppColors.primary,
+                  activeColor: scheme.primary,
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ],
             ),
           ),
-          // Params (only when enabled)
           if (enabled) ...[
-            const Divider(height: 1, color: AppColors.divider),
+            Divider(height: 1, color: c.divider),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: child,
@@ -116,6 +113,7 @@ class SignalSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.appColors;
     return Row(
       children: options.map((opt) {
         final isSelected = value == opt;
@@ -128,7 +126,7 @@ class SignalSelector extends StatelessWidget {
           case 'NEUTRAL':
             optColor = AppColors.neutral;
           default:
-            optColor = AppColors.textSecondary;
+            optColor = c.textSecondary;
         }
         return Expanded(
           child: GestureDetector(
@@ -138,12 +136,10 @@ class SignalSelector extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 2),
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? optColor.withOpacity(0.15)
-                    : AppColors.surfaceVariant,
+                color: isSelected ? optColor.withValues(alpha: 0.15) : c.surfaceVariant,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? optColor : AppColors.border,
+                  color: isSelected ? optColor : c.border,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -151,7 +147,7 @@ class SignalSelector extends StatelessWidget {
                 opt,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isSelected ? optColor : AppColors.textMuted,
+                  color: isSelected ? optColor : c.textMuted,
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
                 ),
@@ -186,23 +182,19 @@ class LabeledSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
+            Text(label, style: TextStyle(color: c.textSecondary, fontSize: 12)),
             Text(
               formatter != null ? formatter!(value) : value.toStringAsFixed(0),
-              style: const TextStyle(
-                color: AppColors.primaryLight,
+              style: TextStyle(
+                color: scheme.primary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -210,9 +202,7 @@ class LabeledSlider extends StatelessWidget {
           ],
         ),
         SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 3,
-          ),
+          data: SliderTheme.of(context).copyWith(trackHeight: 3),
           child: Slider(
             value: value,
             min: min,

@@ -15,15 +15,16 @@ class IndicatorTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.appColors;
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? 10 : 12,
         vertical: compact ? 8 : 10,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: c.surfaceVariant,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: Row(
         children: [
@@ -34,7 +35,7 @@ class IndicatorTile extends StatelessWidget {
                 Text(
                   indicator.name,
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     fontSize: compact ? 12 : 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -42,10 +43,7 @@ class IndicatorTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   indicator.description,
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: compact ? 10 : 11,
-                  ),
+                  style: TextStyle(color: c.textMuted, fontSize: compact ? 10 : 11),
                 ),
               ],
             ),
@@ -73,11 +71,12 @@ class _SignalAgeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.appColors;
     final (color, label) = age == 0
         ? (AppColors.bullish, 'Today')
         : age <= 3
             ? (AppColors.neutral, '${age}d ago')
-            : (AppColors.textMuted, '${age}d ago');
+            : (c.textMuted, '${age}d ago');
 
     return Row(
       mainAxisSize: MainAxisSize.min,

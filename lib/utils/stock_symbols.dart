@@ -18,105 +18,386 @@ class StockSymbol {
   }
 }
 
+/// Curated sector/name map for well-known NSE large-caps.
+/// Symbols not in this map fall back to sector = 'NSE' and name = symbol.
+const Map<String, _NseInfo> _nseInfoMap = {
+  'RELIANCE':    _NseInfo('Reliance Industries',    'Energy'),
+  'TCS':         _NseInfo('Tata Consultancy Services', 'IT'),
+  'HDFCBANK':    _NseInfo('HDFC Bank',              'Banking'),
+  'INFY':        _NseInfo('Infosys',                'IT'),
+  'ICICIBANK':   _NseInfo('ICICI Bank',             'Banking'),
+  'HINDUNILVR':  _NseInfo('Hindustan Unilever',     'FMCG'),
+  'ITC':         _NseInfo('ITC',                    'FMCG'),
+  'SBIN':        _NseInfo('State Bank of India',    'Banking'),
+  'BAJFINANCE':  _NseInfo('Bajaj Finance',          'Finance'),
+  'BHARTIARTL':  _NseInfo('Bharti Airtel',          'Telecom'),
+  'KOTAKBANK':   _NseInfo('Kotak Mahindra Bank',    'Banking'),
+  'WIPRO':       _NseInfo('Wipro',                  'IT'),
+  'LT':          _NseInfo('Larsen & Toubro',        'Infrastructure'),
+  'AXISBANK':    _NseInfo('Axis Bank',              'Banking'),
+  'ASIANPAINT':  _NseInfo('Asian Paints',           'Consumer'),
+  'MARUTI':      _NseInfo('Maruti Suzuki',          'Auto'),
+  'TITAN':       _NseInfo('Titan Company',          'Consumer'),
+  'SUNPHARMA':   _NseInfo('Sun Pharmaceutical',     'Pharma'),
+  'ULTRACEMCO':  _NseInfo('UltraTech Cement',       'Cement'),
+  'NESTLEIND':   _NseInfo('Nestle India',           'FMCG'),
+  'POWERGRID':   _NseInfo('Power Grid Corp',        'Power'),
+  'NTPC':        _NseInfo('NTPC',                   'Power'),
+  'ONGC':        _NseInfo('ONGC',                   'Energy'),
+  'TECHM':       _NseInfo('Tech Mahindra',          'IT'),
+  'HCLTECH':     _NseInfo('HCL Technologies',       'IT'),
+  'INDUSINDBK':  _NseInfo('IndusInd Bank',          'Banking'),
+  'BAJAJFINSV':  _NseInfo('Bajaj Finserv',          'Finance'),
+  'DRREDDY':     _NseInfo('Dr Reddys Labs',         'Pharma'),
+  'CIPLA':       _NseInfo('Cipla',                  'Pharma'),
+  'DIVISLAB':    _NseInfo('Divis Laboratories',     'Pharma'),
+  'EICHERMOT':   _NseInfo('Eicher Motors',          'Auto'),
+  'HEROMOTOCO':  _NseInfo('Hero MotoCorp',          'Auto'),
+  'TATACONSUM':  _NseInfo('Tata Consumer Products', 'FMCG'),
+  'TATASTEEL':   _NseInfo('Tata Steel',             'Metals'),
+  'JSWSTEEL':    _NseInfo('JSW Steel',              'Metals'),
+  'HINDALCO':    _NseInfo('Hindalco Industries',    'Metals'),
+  'ADANIENT':    _NseInfo('Adani Enterprises',      'Conglomerate'),
+  'ADANIPORTS':  _NseInfo('Adani Ports',            'Infrastructure'),
+  'COALINDIA':   _NseInfo('Coal India',             'Mining'),
+  'GRASIM':      _NseInfo('Grasim Industries',      'Diversified'),
+  'BAJAJ-AUTO':  _NseInfo('Bajaj Auto',             'Auto'),
+  'BRITANNIA':   _NseInfo('Britannia Industries',   'FMCG'),
+  'BPCL':        _NseInfo('BPCL',                   'Energy'),
+  'TATAPOWER':   _NseInfo('Tata Power',             'Power'),
+  'M&M':         _NseInfo('Mahindra & Mahindra',    'Auto'),
+  'SBILIFE':     _NseInfo('SBI Life Insurance',     'Insurance'),
+  'HDFCLIFE':    _NseInfo('HDFC Life Insurance',    'Insurance'),
+  'PIDILITIND':  _NseInfo('Pidilite Industries',    'Chemicals'),
+  'APOLLOHOSP':  _NseInfo('Apollo Hospitals',       'Healthcare'),
+  'DMART':       _NseInfo('Avenue Supermarts',      'Retail'),
+  'NYKAA':       _NseInfo('Nykaa',                  'Internet'),
+  'PAYTM':       _NseInfo('Paytm',                  'Fintech'),
+  'IRCTC':       _NseInfo('IRCTC',                  'Travel'),
+  'HAL':         _NseInfo('HAL',                    'Defence'),
+  'BEL':         _NseInfo('Bharat Electronics',     'Defence'),
+  'MUTHOOTFIN':  _NseInfo('Muthoot Finance',        'Finance'),
+  'MARICO':      _NseInfo('Marico',                 'FMCG'),
+  'GODREJCP':    _NseInfo('Godrej Consumer Products', 'FMCG'),
+  'DABUR':       _NseInfo('Dabur India',            'FMCG'),
+  'COLPAL':      _NseInfo('Colgate Palmolive',      'FMCG'),
+  'TORNTPHARM':  _NseInfo('Torrent Pharma',         'Pharma'),
+  'LUPIN':       _NseInfo('Lupin',                  'Pharma'),
+  'AUROPHARMA':  _NseInfo('Aurobindo Pharma',       'Pharma'),
+  'PETRONET':    _NseInfo('Petronet LNG',           'Energy'),
+  'IOC':         _NseInfo('Indian Oil Corp',        'Energy'),
+  'VEDL':        _NseInfo('Vedanta',                'Metals'),
+  'SAIL':        _NseInfo('Steel Authority',        'Metals'),
+  'PFC':         _NseInfo('Power Finance Corp',     'Finance'),
+  'RECLTD':      _NseInfo('REC Limited',            'Finance'),
+  'CANBK':       _NseInfo('Canara Bank',            'Banking'),
+  'BANKBARODA':  _NseInfo('Bank of Baroda',         'Banking'),
+  'PNB':         _NseInfo('Punjab National Bank',   'Banking'),
+};
+
+class _NseInfo {
+  final String name;
+  final String sector;
+  const _NseInfo(this.name, this.sector);
+}
+
+// ---------------------------------------------------------------------------
+// Full NSE universe provided by the user (~1 500 symbols)
+// ---------------------------------------------------------------------------
+const String _nseSymbolsRaw =
+    '20MICRONS,21STCENMGM,360ONE,3IINFOLTD,3MINDIA,3PLAND,5PAISA,63MOONS,'
+    'A2ZINFRA,AAATECH,AADHARHFC,AAKASH,AAREYDRUGS,AARON,AARTECH,AARTIDRUGS,'
+    'AARTIIND,AARTIPHARM,AARTISURF,AARVI,AAVAS,ABAN,ABB,ABBOTINDIA,ABCAPITAL,'
+    'ABDL,ABFRL,ABINFRA,ABMINTLLTD,ABREL,ABSLAMC,ACC,ACCELYA,ACCURACY,ACE,'
+    'ACEINTEG,ACI,ACL,ACMESOLAR,ADANIENSOL,ADANIENT,ADANIGREEN,ADANIPORTS,'
+    'ADANIPOWER,ADFFOODS,ADL,ADOR,ADROITINFO,ADSL,ADVANIHOTR,ADVENZYMES,'
+    'AEGISLOG,AEROFLEX,AETHER,AFCONS,AFFLE,AFFORDABLE,AFIL,AFSL,AGARIND,'
+    'AGARWALEYE,AGI,AGIIL,AGRITECH,AGROPHOS,AGSTRA,AHLADA,AHLEAST,AHLUCONT,'
+    'AIAENG,AIIL,AIRAN,AIROLAM,AJANTPHARM,AJAXENGG,AJMERA,AJOONI,AKASH,AKG,'
+    'AKI,AKSHAR,AKSHARCHEM,AKSHOPTFBR,AKUMS,AKZOINDIA,ALANKIT,ALBERTDAVD,'
+    'ALEMBICLTD,ALICON,ALIVUS,ALKALI,ALKEM,ALKYLAMINE,ALLCARGO,ALLDIGI,'
+    'ALMONDZ,ALOKINDS,ALPA,ALPHAGEO,ALPSINDUS,AMBER,AMBICAAGAR,AMBIKCO,'
+    'AMBUJACEM,AMDIND,AMJLAND,AMNPLST,AMRUTANJAN,ANANDRATHI,ANANTRAJ,'
+    'ANDHRAPAP,ANDHRSUGAR,ANGELONE,ANIKINDS,ANMOL,ANSALAPI,ANTGRAPHIC,'
+    'ANUHPHR,ANUP,ANURAS,APARINDS,APCL,APCOTEXIND,APEX,APLAPOLLO,APLLTD,'
+    'APOLLO,APOLLOHOSP,APOLLOPIPE,APOLLOTYRE,APOLSINHOT,APTECHT,APTUS,'
+    'ARCHIDPLY,ARCHIES,ARE&M,ARENTERP,ARIES,ARIHANTCAP,ARIHANTSUP,ARKADE,'
+    'ARMANFIN,AROGRANITE,ARROWGREEN,ARSHIYA,ARTEMISMED,ARTNIRMAN,ARVEE,'
+    'ARVIND,ARVINDFASN,ARVSMART,ASAHIINDIA,ASAHISONG,ASAL,ASALCBR,ASHAPURMIN,'
+    'ASHIANA,ASHIMASYN,ASHOKA,ASHOKAMET,ASHOKLEY,ASIANENE,ASIANHOTNR,'
+    'ASIANPAINT,ASIANTILES,ASKAUTOLTD,ASMS,ASPINWALL,ASTEC,ASTERDM,ASTRAL,'
+    'ASTRAMICRO,ASTRAZEN,ASTRON,ATALREAL,ATAM,ATGL,ATL,ATLANTAA,ATLASCYCLE,'
+    'ATUL,ATULAUTO,AUBANK,AURIONPRO,AUROPHARMA,AURUM,AUSOMENT,AUTOAXLES,'
+    'AUTOIND,AVADHSUGAR,AVALON,AVANTEL,AVANTIFEED,AVG,AVL,AVONMORE,AVROIND,'
+    'AVTNPL,AWFIS,AWHCL,AWL,AXISBANK,AXISCADES,AXITA,AYMSYNTEX,AZAD,'
+    'BAFNAPH,BAGFILMS,BAIDFIN,BAJAJ-AUTO,BAJAJCON,BAJAJELEC,BAJAJFINSV,'
+    'BAJAJHCARE,BAJAJHFL,BAJAJHIND,BAJAJHLDNG,BAJAJINDEF,BAJEL,BAJFINANCE,'
+    'BALAJEE,BALAJITELE,BALAMINES,BALAXI,BALKRISHNA,BALKRISIND,BALMLAWRIE,'
+    'BALPHARMA,BALRAMCHIN,BALUFORGE,BANARBEADS,BANARISUG,BANCOINDIA,BANDHANBNK,'
+    'BANG,BANKA,BANKBARODA,BANKINDIA,BANSALWIRE,BANSWRAS,BASF,BASML,BATAINDIA,'
+    'BAYERCROP,BBL,BBOX,BBTC,BBTCL,BCLIND,BCONCEPTS,BDL,BEARDSELL,BECTORFOOD,'
+    'BEDMUTHA,BEL,BEML,BEPL,BERGEPAINT,BESTAGRO,BFINVEST,BFUTILITIE,BGRENERGY,'
+    'BHAGCHEM,BHAGERIA,BHAGYANGR,BHANDARI,BHARATFORG,BHARATGEAR,BHARATRAS,'
+    'BHARATSE,BHARATWIRE,BHARTIARTL,BHARTIHEXA,BHEL,BIGBLOC,BIKAJI,BIL,'
+    'BIOCON,BIOFILCHEM,BIRLACABLE,BIRLACORPN,BIRLAMONEY,BIRLANU,BLACKBUCK,'
+    'BLAL,BLBLIMITED,BLISSGVS,BLKASHYAP,BLS,BLSE,BLUECHIP,BLUECOAST,BLUEDART,'
+    'BLUEJET,BLUESTARCO,BODALCHEM,BOHRAIND,BOMDYEING,BOROLTD,BORORENEW,'
+    'BOROSCI,BOSCHLTD,BPCL,BPL,BRIGADE,BRITANNIA,BRNL,BROOKS,BSE,BSHSL,BSL,'
+    'BSOFT,BTML,BUTTERFLY,BVCL,BYKE,'
+    'CALSOFT,CAMLINFINE,CAMPUS,CAMS,CANBK,CANFINHOME,CANTABIL,CAPACITE,'
+    'CAPITALSFB,CAPLIPOINT,CAPTRUST,CARBORUNIV,CARERATING,CARRARO,CARTRADE,'
+    'CARYSIL,CASTROLIND,CCCL,CCHHL,CCL,CDSL,CEATLTD,CEIGALL,CELEBRITY,CELLO,'
+    'CENTENKA,CENTEXT,CENTRALBK,CENTRUM,CENTUM,CENTURYPLY,CERA,CEREBRAINT,'
+    'CESC,CEWATER,CGCL,CGPOWER,CHALET,CHAMBLFERT,CHEMBOND,CHEMCON,CHEMFAB,'
+    'CHEMPLASTS,CHENNPETRO,CHEVIOT,CHOICEIN,CHOLAFIN,CHOLAHLDNG,CIEINDIA,CIFL,'
+    'CIGNITITEC,CINELINE,CINEVISTA,CIPLA,CLEAN,CLEDUCATE,CLSEL,CMSINFO,'
+    'COALINDIA,COASTCORP,COCHINSHIP,COFFEEDAY,COFORGE,COLPAL,COMPINFO,'
+    'COMPUSOFT,COMSYN,CONCOR,CONCORDBIO,CONFIPET,CONSOFINVT,CONTROLPR,'
+    'CORALFINAC,CORDSCABLE,COROMANDEL,COSMOFIRST,COUNCODOS,CPCAP,CRAFTSMAN,'
+    'CREATIVE,CREATIVEYE,CREDITACC,CREST,CRISIL,CROMPTON,CROWN,CSBBANK,'
+    'CSLFINANCE,CTE,CUB,CUBEXTUB,CUMMINSIND,CUPID,CURAA,CYBERMEDIA,CYBERTECH,'
+    'CYIENT,CYIENTDLM,'
+    'DABUR,DALBHARAT,DALMIASUG,DAMCAPITAL,DAMODARIND,DANGEE,DATAMATICS,'
+    'DATAPATTNS,DAVANGERE,DBCORP,DBEIL,DBL,DBOL,DBREALTY,DBSTOCKBRO,DCAL,'
+    'DCBBANK,DCI,DCM,DCMFINSERV,DCMNVL,DCMSHRIRAM,DCMSRIND,DCW,DCXINDIA,'
+    'DDEVPLSTIK,DECCANCE,DEEDEV,DEEPAKFERT,DEEPAKNTR,DEEPINDS,DELHIVERY,'
+    'DELPHIFX,DELTACORP,DELTAMAGNT,DEN,DENORA,DENTA,DEVIT,DEVYANI,DGCONTENT,'
+    'DHAMPURSUG,DHANBANK,DHANUKA,DHARMAJ,DHRUV,DHUNINV,DIACABS,DIAMINESQ,'
+    'DIAMONDYD,DICIND,DIFFNKG,DIGIDRIVE,DIGISPICE,DIGJAMLMTD,DIL,DISHTV,'
+    'DIVGIITTS,DIVISLAB,DIXON,DJML,DLF,DLINKINDIA,DMART,DMCC,DNAMEDIA,DODLA,'
+    'DOLATALGO,DOLLAR,DOLPHIN,DOMS,DONEAR,DPABHUSHAN,DPSCLTD,DPWIRES,'
+    'DRCSYSTEMS,DREAMFOLKS,DREDGECORP,DRREDDY,DSSL,DTIL,DUCON,DVL,DWARKESH,'
+    'DYCL,DYNAMATECH,DYNPRO,'
+    'E2E,EASEMYTRIP,ECLERX,ECOSMOBLTY,EDELWEISS,EICHERMOT,EIDPARRY,EIEL,'
+    'EIFFL,EIHAHOTELS,EIHOTEL,EIMCOELECO,EKC,ELDEHSG,ELECON,ELECTCAST,'
+    'ELECTHERM,ELGIEQUIP,ELGIRUBCO,ELIN,EMAMILTD,EMAMIPAP,EMAMIREAL,EMBDL,'
+    'EMCURE,EMIL,EMKAY,EMMBI,EMSLIMITED,EMUDHRA,ENDURANCE,ENERGYDEV,ENGINERSIN,'
+    'ENIL,ENTERO,EPACK,EPIGRAL,EPL,EQUIPPP,EQUITASBNK,ERIS,ESABINDIA,ESAFSFB,'
+    'ESCORTS,ESSARSHPNG,ESSENTIA,ESTER,ETERNAL,ETHOSLTD,EUREKAFORB,EUROTEXIND,'
+    'EVEREADY,EVERESTIND,EXCEL,EXCELINDUS,EXICOM,EXIDEIND,EXPLEOSOL,EXXARO,'
+    'FACT,FAIRCHEMOR,FAZE3Q,FCL,FCSSOFT,FDC,FEDERALBNK,FEDFINA,FEL,FELDVR,'
+    'FIBERWEB,FIEMIND,FILATEX,FILATFASH,FINCABLES,FINEORG,FINOPB,FINPIPE,'
+    'FIRSTCRY,FIVESTAR,FLAIR,FLEXITUFF,FLFL,FLUOROCHEM,FMGOETZE,FMNL,FOCUS,'
+    'FOODSIN,FORCEMOT,FORTIS,FOSECOIND,FSC,FSL,FUSION,'
+    'GABRIEL,GAEL,GAIL,GALAPREC,GALAXYSURF,GALLANTT,GANDHAR,GANDHITUBE,'
+    'GANECOS,GANESHBE,GANGAFORGE,GANGESSECU,GARFIBRES,GARUDA,GATECH,GATECHDVR,'
+    'GATEWAY,GAYAHWS,GAYAPROJ,GEECEE,GEEKAYWIRE,GENCON,GENESYS,GENSOL,'
+    'GENUSPAPER,GENUSPOWER,GEOJITFSL,GESHIP,GFLLIMITED,GHCL,GHCLTEXTIL,'
+    'GICHSGFIN,GICRE,GILLANDERS,GILLETTE,GINNIFILA,GIPCL,GKWLIMITED,GLAND,'
+    'GLAXO,GLENMARK,GLFL,GLOBAL,GLOBALE,GLOBALVECT,GLOBE,GLOBUSSPR,GLOSTERLTD,'
+    'GMBREW,GMDCLTD,GMMPFAUDLR,GMRAIRPORT,GMRP&UI,GNA,GNFC,GOACARBON,'
+    'GOCLCORP,GOCOLORS,GODAVARIB,GODFRYPHLP,GODIGIT,GODREJAGRO,GODREJCP,'
+    'GODREJIND,GODREJPROP,GOENKA,GOKEX,GOKUL,GOKULAGRO,GOLDENTOBC,GOLDIAM,'
+    'GOLDTECH,GOODLUCK,GOPAL,GOYALALUM,GPIL,GPPL,GPTHEALTH,GPTINFRA,GRANULES,'
+    'GRAPHITE,GRASIM,GRAVITA,GREAVESCOT,GREENLAM,GREENPANEL,GREENPLY,GREENPOWER,'
+    'GRINDWELL,GRINFRA,GRMOVER,GROBTEA,GRPLTD,GRSE,GRWRHITECH,GSFC,GSLSU,GSPL,'
+    'GSS,GTECJAINX,GTL,GTLINFRA,GTPL,GUFICBIO,GUJALKALI,GUJAPOLLO,GUJGASLTD,'
+    'GUJRAFFIA,GUJTHEM,GULFOILLUB,GULFPETRO,GULPOLY,GVKPIL,GVPTECH,GVT&D,'
+    'HAL,HAPPSTMNDS,HAPPYFORGE,HARDWYN,HARIOMPIPE,HARRMALAYA,HARSHA,HATHWAY,'
+    'HATSUN,HAVELLS,HAVISHA,HBLENGINE,HBSL,HCC,HCG,HCL-INSYS,HCLTECH,HDFCAMC,'
+    'HDFCBANK,HDFCLIFE,HDIL,HEADSUP,HECPROJECT,HEG,HEIDELBERG,HEMIPROP,HERANBA,'
+    'HERCULES,HERITGFOOD,HEROMOTOCO,HESTERBIO,HEUBACHIND,HEXATRADEX,HEXT,HFCL,'
+    'HGINFRA,HGS,HIKAL,HILTON,HIMATSEIDE,HINDALCO,HINDCOMPOS,HINDCON,HINDCOPPER,'
+    'HINDOILEXP,HINDPETRO,HINDUNILVR,HINDWAREAP,HINDZINC,HIRECT,HISARMETAL,'
+    'HITECH,HITECHCORP,HITECHGEAR,HLEGLAS,HLVLTD,HMAAGRO,HMT,HMVL,HNDFDS,'
+    'HOMEFIRST,HONASA,HONAUT,HONDAPOWER,HPAL,HPIL,HPL,HSCL,HTMEDIA,HUBTOWN,'
+    'HUDCO,HUHTAMAKI,HYBRIDFIN,HYUNDAI,'
+    'ICDSLTD,ICEMAKE,ICICIBANK,ICICIGI,ICICIPRULI,ICIL,ICRA,IDBI,IDEA,'
+    'IDEAFORGE,IDFCFIRSTB,IEX,IFBAGRO,IFBIND,IFCI,IFGLEXPOR,IGARASHI,IGIL,'
+    'IGL,IGPL,IIFL,IIFLCAPS,IITL,IKIO,IKS,IL&FSENGG,IL&FSTRANS,IMAGICAA,IMFA,'
+    'IMPAL,IMPEXFERRO,INCREDIBLE,INDBANK,INDGN,INDHOTEL,INDIACEM,INDIAGLYCO,'
+    'INDIAMART,INDIANB,INDIANCARD,INDIANHUME,INDIASHLTR,INDIGO,INDIGOPNTS,'
+    'INDNIPPON,INDOAMIN,INDOBORAX,INDOCO,INDOFARM,INDORAMA,INDOSTAR,INDOTECH,'
+    'INDOTHAI,INDOUS,INDOWIND,INDRAMEDCO,INDSWFTLAB,INDTERRAIN,INDUSINDBK,'
+    'INDUSTOWER,INFIBEAM,INFOBEAN,INFOMEDIA,INFY,INGERRAND,INNOVACAP,INNOVANA,'
+    'INOXGREEN,INOXINDIA,INOXWIND,INSECTICID,INSPIRISYS,INTELLECT,INTENTECH,'
+    'INTERARCH,INTLCONV,INVENTURE,IOB,IOC,IOLCP,IONEXCHANG,IPCALAB,IPL,IRB,'
+    'IRCON,IRCTC,IREDA,IRFC,IRIS,IRISDOREME,IRMENERGY,ISFT,ISGEC,ISHANCH,ITC,'
+    'ITCHOTELS,ITDC,ITI,IVC,IVP,IXIGO,IZMO,'
+    'J&KBANK,JAGRAN,JAGSNPHARM,JAIBALAJI,JAICORPLTD,JAIPURKURT,JAMNAAUTO,JASH,'
+    'JAYAGROGN,JAYBARMARU,JAYNECOIND,JAYSREETEA,JBCHEPHARM,JBMA,JCHAC,'
+    'JETFREIGHT,JGCHEM,JHS,JINDALPHOT,JINDALPOLY,JINDALSAW,JINDALSTEL,JINDRILL,'
+    'JINDWORLD,JIOFIN,JISLDVREQS,JISLJALEQS,JITFINFRA,JKCEMENT,JKIL,JKLAKSHMI,'
+    'JKPAPER,JKTYRE,JLHL,JMA,JMFINANCIL,JNKINDIA,JOCIL,JPOLYINVST,JPPOWER,'
+    'JSFB,JSL,JSWENERGY,JSWHL,JSWINFRA,JSWSTEEL,JTEKTINDIA,JTLIND,JUBLCPL,'
+    'JUBLFOOD,JUBLINGREA,JUBLPHARMA,JUNIPER,JUSTDIAL,JWL,JYOTHYLAB,JYOTICNC,'
+    'JYOTISTRUC,'
+    'KABRAEXTRU,KAJARIACER,KAKATCEM,KALAMANDIR,KALYANI,KALYANIFRG,KALYANKJIL,'
+    'KAMATHOTEL,KAMDHENU,KAMOPAINTS,KANANIIND,KANORICHEM,KANPRPLA,KANSAINER,'
+    'KAPSTON,KARMAENG,KARURVYSYA,KAUSHALYA,KAYA,KAYNES,KCP,KCPSUGIND,KDDL,KEC,'
+    'KECL,KEEPLEARN,KEI,KELLTONTEC,KERNEX,KESORAMIND,KEYFINSERV,KFINTECH,KHADIM,'
+    'KHAICHEM,KHAITANLTD,KHANDSE,KICL,KILITCH,KIMS,KINGFA,KIOCL,KIRIINDUS,'
+    'KIRLOSBROS,KIRLOSENG,KIRLOSIND,KIRLPNU,KITEX,KKCL,KMEW,KMSUGAR,KNRCON,'
+    'KOHINOOR,KOKUYOCMLN,KOLTEPATIL,KOPRAN,KOTAKBANK,KOTARISUG,KOTHARIPET,'
+    'KOTHARIPRO,KPEL,KPIGREEN,KPIL,KPITTECH,KPRMILL,KRBL,KREBSBIO,KRIDHANINF,'
+    'KRISHANA,KRITI,KRITIKA,KRITINUT,KRN,KRONOX,KROSS,KRSNAA,KRYSTAL,KSB,KSCL,'
+    'KSHITIJPOL,KSL,KSOLVES,KTKBANK,KUANTUM,'
+    'LAGNAM,LAKPRE,LAL,LALPATHLAB,LAMBODHARA,LANCORHOL,LANDMARK,LAOPALA,LASA,'
+    'LATENTVIEW,LATTEYS,LAURUSLABS,LAXMICOT,LAXMIDENTL,LCCINFOTEC,LEMONTREE,'
+    'LEXUS,LFIC,LGBBROSLTD,LGHL,LIBAS,LIBERTSHOE,LICHSGFIN,LICI,LIKHITHA,'
+    'LINCOLN,LINDEINDIA,LLOYDSENGG,LLOYDSENT,LLOYDSME,LMW,LODHA,LOKESHMACH,'
+    'LORDSCHLO,LOTUSEYE,LOVABLE,LOYALTEX,LPDC,LT,LTF,LTFOODS,LTIM,LTTS,'
+    'LUMAXIND,LUMAXTECH,LUPIN,LUXIND,LXCHEM,LYKALABS,LYPSAGEMS,'
+    'M&M,M&MFIN,MAANALU,MACPOWER,MADHAV,MADHUCON,MADRASFERT,MAGADSUGAR,MAGNUM,'
+    'MAHABANK,MAHAPEXLTD,MAHASTEEL,MAHEPC,MAHESHWARI,MAHLIFE,MAHLOG,MAHSCOOTER,'
+    'MAHSEAMLES,MAITHANALL,MALLCOM,MALUPAPER,MAMATA,MANAKALUCO,MANAKCOAT,'
+    'MANAKSIA,MANAKSTEEL,MANALIPETC,MANAPPURAM,MANBA,MANCREDIT,MANGALAM,'
+    'MANGLMCEM,MANINDS,MANINFRA,MANKIND,MANOMAY,MANORAMA,MANORG,MANUGRAPH,'
+    'MANYAVAR,MAPMYINDIA,MARALOVER,MARATHON,MARICO,MARINE,MARKSANS,MARSHALL,'
+    'MARUTI,MASFIN,MASKINVEST,MASTEK,MASTERTR,MATRIMONY,MAWANASUG,MAXESTATES,'
+    'MAXHEALTH,MAXIND,MAYURUNIQ,MAZDA,MAZDOCK,MBAPL,MBLINFRA,MCL,MCLEODRUSS,'
+    'MCLOUD,MCX,MEDANTA,MEDIASSIST,MEDICAMEQ,MEDICO,MEDPLUS,MEGASOFT,MEGASTAR,'
+    'MENONBE,MEP,METROBRAND,METROPOLIS,MFML,MFSL,MGEL,MGL,MHLXMIRU,MHRIL,'
+    'MICEL,MIDHANI,MINDACORP,MINDTECK,MIRCELECTR,MIRZAINT,MITCON,MITTAL,MKPL,'
+    'MMFL,MMP,MMTC,MOBIKWIK,MODIRUBBER,MODISONLTD,MODTHREAD,MOHITIND,MOIL,'
+    'MOKSH,MOL,MOLDTECH,MOLDTKPAC,MONARCH,MONTECARLO,MORARJEE,MOREPENLAB,'
+    'MOSCHIP,MOTHERSON,MOTILALOFS,MOTISONS,MOTOGENFIN,MPHASIS,MPSLTD,MRF,MRPL,'
+    'MSPL,MSTCLTD,MSUMI,MTARTECH,MTEDUCARE,MTNL,MUFIN,MUFTI,MUKANDLTD,MUKKA,'
+    'MUKTAARTS,MUNJALAU,MUNJALSHOW,MURUDCERA,MUTHOOTCAP,MUTHOOTFIN,MUTHOOTMF,'
+    'MVGJL,'
+    'NACLIND,NAGAFERT,NAGREEKCAP,NAGREEKEXP,NAHARCAP,NAHARINDUS,NAHARPOLY,'
+    'NAHARSPING,NAM-INDIA,NARMADA,NATCAPSUQ,NATCOPHARM,NATHBIOGEN,NATIONALUM,'
+    'NAUKRI,NAVA,NAVINFLUOR,NAVKARCORP,NAVKARURB,NAVNETEDUL,NAZARA,NBCC,NBIFIN,'
+    'NCC,NCLIND,NDGL,NDL,NDLVENTURE,NDRAUTO,NDTV,NECCLTD,NECLIFE,NELCAST,NELCO,'
+    'NEOGEN,NESCO,NESTLEIND,NETWEB,NETWORK18,NEULANDLAB,NEWGEN,NEXTMEDIA,NFL,'
+    'NGIL,NGLFINE,NH,NHPC,NIACL,NIBE,NIBL,NIITLTD,NIITMTS,NILAINFRA,NILASPACES,'
+    'NILKAMAL,NINSYS,NIPPOBATRY,NIRAJ,NIRAJISPAT,NITCO,NITINSPIN,NITIRAJ,'
+    'NIVABUPA,NKIND,NLCINDIA,NMDC,NOCIL,NOIDATOLL,NORBTEAEXP,NORTHARC,NOVAAGRI,'
+    'NRAIL,NRBBEARING,NRL,NSIL,NSLNISP,NTPC,NTPCGREEN,NUCLEUS,NURECA,NUVAMA,'
+    'NUVOCO,NYKAA,'
+    'OAL,OBCL,OBEROIRLTY,OCCLLTD,ODIGMA,OFSS,OIL,OILCOUNTUB,OLAELEC,OLECTRA,'
+    'OMAXAUTO,OMAXE,OMINFRAL,OMKARCHEM,ONELIFECAP,ONEPOINT,ONESOURCE,ONGC,'
+    'ONMOBILE,ONWARDTEC,OPTIEMUS,ORBTEXP,ORCHASP,ORCHPHARMA,ORICONENT,'
+    'ORIENTALTL,ORIENTBELL,ORIENTCEM,ORIENTCER,ORIENTELEC,ORIENTHOT,ORIENTLTD,'
+    'ORIENTPPR,ORIENTTECH,ORISSAMINE,ORTEL,ORTINGLOBE,OSIAHYPER,OSWALAGRO,'
+    'OSWALGREEN,OSWALSEEDS,'
+    'PAGEIND,PAISALO,PAKKA,PALASHSECU,PALREDTEC,PANACEABIO,PANACHE,PANAMAPET,'
+    'PANSARI,PAR,PARACABLES,PARADEEP,PARAGMILK,PARAS,PARASPETRO,PARKHOTELS,'
+    'PARSVNATH,PASUPTAC,PATANJALI,PATELENG,PATINTLOG,PAVNAIND,PAYTM,PCBL,'
+    'PCJEWELLER,PDMJEPAPER,PDSL,PEARLPOLY,PENIND,PENINLAND,PERSISTENT,PETRONET,'
+    'PFC,PFIZER,PFOCUS,PFS,PGEL,PGHH,PGHL,PGIL,PHOENIXLTD,PIDILITIND,PIGL,'
+    'PIIND,PILANIINVS,PILITA,PIONEEREMB,PITTIENG,PIXTRANS,PKTEA,PLASTIBLEN,'
+    'PLATIND,PLAZACABLE,PNB,PNBGILTS,PNBHOUSING,PNC,PNCINFRA,PNGJL,POCL,'
+    'PODDARMENT,POKARNA,POLICYBZR,POLYCAB,POLYMED,POLYPLEX,PONNIERODE,'
+    'POONAWALLA,POWERGRID,POWERINDIA,POWERMECH,PPAP,PPL,PPLPHARMA,PRABHA,'
+    'PRAENG,PRAJIND,PRAKASH,PRAKASHSTL,PRAXIS,PRECAM,PRECOT,PRECWIRE,PREMEXPLN,'
+    'PREMIER,PREMIERENE,PREMIERPOL,PRESTIGE,PRICOLLTD,PRIMESECU,PRINCEPIPE,'
+    'PRITI,PRITIKAUTO,PRIVISCL,PROTEAN,PROZONER,PRSMJOHNSN,PRUDENT,PRUDMOULI,'
+    'PSB,PSPPROJECT,PTC,PTCIL,PTL,PUNJABCHEM,PURVA,PVP,PVRINOX,PVSL,PYRAMID,'
+    'QPOWER,QUADFUTURE,QUESS,QUICKHEAL,'
+    'RACE,RACLGEAR,RADAAN,RADHIKAJWE,RADIANTCMS,RADICO,RADIOCITY,RAILTEL,RAIN,'
+    'RAINBOW,RAJESHEXPO,RAJMET,RAJRATAN,RAJRILTD,RAJSREESUG,RAJTV,RALLIS,'
+    'RAMANEWS,RAMAPHO,RAMASTEEL,RAMCOCEM,RAMCOIND,RAMCOSYS,RAMKY,RAMRAT,RANASUG,'
+    'RANEHOLDIN,RATEGAIN,RATNAMANI,RATNAVEER,RAYMOND,RAYMONDLSL,RBA,RBLBANK,'
+    'RBZJEWEL,RCF,RCOM,RECLTD,REDINGTON,REDTAPE,REFEX,REGENCERAM,RELAXO,'
+    'RELCHEMQ,RELIABLE,RELIANCE,RELIGARE,RELINFRA,RELTD,REMSONSIND,RENUKA,'
+    'REPCOHOME,REPL,REPRO,RESPONIND,RETAIL,RGL,RHFL,RHIM,RHL,RICOAUTO,RIIL,'
+    'RISHABH,RITCO,RITES,RKDL,RKEC,RKFORGE,RKSWAMY,RML,ROHLTD,ROLEXRINGS,'
+    'ROLLT,ROLTA,ROML,ROSSARI,ROSSELLIND,ROSSTECH,ROTO,ROUTE,RPEL,RPGLIFE,'
+    'RPOWER,RPPINFRA,RPPL,RPSGVENT,RPTECH,RRKABEL,RSSOFTWARE,RSWM,RSYSTEMS,'
+    'RTNINDIA,RTNPOWER,RUBFILA,RUBYMILLS,RUCHINFRA,RUCHIRA,RUPA,RUSHIL,'
+    'RUSTOMJEE,RVHL,RVNL,RVTH,'
+    'S&SPOWER,SABEVENTS,SABTNL,SADBHAV,SADBHIN,SADHNANIQ,SAFARI,SAGARDEEP,'
+    'SAGCEM,SAGILITY,SAHYADRI,SAIL,SAILIFE,SAKAR,SAKHTISUG,SAKSOFT,SAKUMA,'
+    'SALASAR,SALONA,SALSTEEL,SALZERELEC,SAMBHAAV,SAMHI,SAMMAANCAP,SAMPANN,'
+    'SANATHAN,SANCO,SANDESH,SANDHAR,SANDUMA,SANGAMIND,SANGHIIND,SANGHVIMOV,'
+    'SANGINITA,SANOFI,SANOFICONR,SANSERA,SANSTAR,SANWARIA,SAPPHIRE,SARDAEN,'
+    'SAREGAMA,SARLAPOLY,SARVESHWAR,SASKEN,SASTASUNDR,SATIA,SATIN,SAURASHCEM,'
+    'SBC,SBCL,SBFC,SBGLP,SBICARD,SBILIFE,SBIN,SCHAEFFLER,SCHAND,SCHNEIDER,SCI,'
+    'SCILAL,SCPL,SDBL,SEAMECLTD,SECMARK,SECURKLOUD,SEJALLTD,SELMC,SEMAC,SENCO,'
+    'SENORES,SEPC,SEQUENT,SERVOTECH,SESHAPAPER,SETCO,SETUINFRA,SEYAIND,SFL,'
+    'SGIL,SGL,SGLTL,SHAH,SHAHALLOYS,SHAILY,SHAKTIPUMP,SHALBY,SHALPAINTS,'
+    'SHANKARA,SHANTI,SHANTIGEAR,SHARDACROP,SHARDAMOTR,SHAREINDIA,SHEKHAWATI,'
+    'SHEMAROO,SHILPAMED,SHIVALIK,SHIVAMAUTO,SHIVAMILLS,SHIVATEX,SHK,SHOPERSTOP,'
+    'SHRADHA,SHREDIGCEM,SHREECEM,SHREEPUSHK,SHREERAMA,SHRENIK,SHREYANIND,'
+    'SHRIPISTON,SHRIRAMFIN,SHRIRAMPPS,SHYAMCENT,SHYAMMETL,SHYAMTEL,SICALLOG,'
+    'SIEMENS,SIGACHI,SIGIND,SIGMA,SIGNATURE,SIGNPOST,SIKKO,SIL,SILGO,SILINV,'
+    'SILLYMONKS,SILVERTUC,SIMBHALS,SIMPLEXINF,SINCLAIR,SINDHUTRAD,SINTERCOM,'
+    'SIRCA,SIS,SITINET,SIYSIL,SJS,SJVN,SKFINDIA,SKIPPER,SKMEGGPROD,SKYGOLD,'
+    'SMARTLINK,SMCGLOBAL,SMLT,SMSLIFE,SMSPHARMA,SNOWMAN,SOBHA,SOFTTECH,SOLARA,'
+    'SOLARINDS,SOMANYCERA,SOMATEX,SOMICONVEY,SONACOMS,SONAMLTD,SONATSOFTW,SOTL,'
+    'SOUTHBANK,SOUTHWEST,SPAL,SPANDANA,SPARC,SPCENET,SPECIALITY,SPECTRUM,'
+    'SPENCERS,SPIC,SPLIL,SPLPETRO,SPMLINFRA,SPORTKING,SRD,SREEL,SRF,SRGHFL,'
+    'SRHHYPOLTD,SRM,SRPL,SSDL,SSWL,STALLION,STANLEY,STAR,STARCEMENT,STARHEALTH,'
+    'STARPAPER,STARTECK,STCINDIA,STEELCAS,STEELCITY,STEELXIND,STEL,STERTOOLS,'
+    'STLTECH,STOVEKRAFT,STYLAMIND,STYLEBAAZA,STYRENIX,SUBEXLTD,SUBROS,'
+    'SUDARSCHEM,SUKHJITS,SULA,SUMICHEM,SUMIT,SUMMITSEC,SUNCLAY,SUNDARAM,'
+    'SUNDARMFIN,SUNDRMBRAK,SUNDRMFAST,SUNDROP,SUNFLAG,SUNPHARMA,SUNTECK,SUNTV,'
+    'SUPERHOUSE,SUPERSPIN,SUPRAJIT,SUPREME,SUPREMEENG,SUPREMEIND,SUPREMEINF,'
+    'SUPRIYA,SURAJEST,SURAJLTD,SURAKSHA,SURANASOL,SURANAT&P,SURYALAXMI,'
+    'SURYAROSNI,SURYODAY,SUTLEJTEX,SUULD,SUVEN,SUVIDHAA,SUYOG,SUZLON,SVLL,'
+    'SVPGLOB,SWARAJENG,SWELECTES,SWIGGY,SWSOLAR,SYMPHONY,SYNCOMF,SYNGENE,SYRMA,'
+    'TAINWALCHM,TAJGVK,TAKE,TALBROAUTO,TANLA,TARACHAND,TARAPUR,TARC,TARIL,'
+    'TARMAT,TARSONS,TASTYBITE,TATACHEM,TATACOMM,TATACONSUM,TATAELXSI,TATAINVEST,'
+    'TATAPOWER,TATASTEEL,TATATECH,TATVA,TBOTEK,TBZ,TCI,TCIEXP,TCIFINANCE,'
+    'TCPLPACK,TCS,TDPOWERSYS,TEAMLEASE,TECHM,TECHNOE,TEGA,TEJASNET,TEMBO,'
+    'TERASOFT,TEXINFRA,TEXMOPIPES,TEXRAIL,TFCILTD,TFL,TGBHOTELS,THANGAMAYL,'
+    'THEINVEST,THEJO,THEMISMED,THERMAX,THOMASCOOK,THOMASCOTT,THYROCARE,TI,TICL,'
+    'TIIL,TIINDIA,TIJARIA,TIL,TIMETECHNO,TIMKEN,TINNARUBR,TIPSFILMS,TIPSMUSIC,'
+    'TIRUMALCHM,TIRUPATIFL,TITAGARH,TITAN,TMB,TNPETRO,TNPL,TNTELE,TOKYOPLAST,'
+    'TOLINS,TORNTPHARM,TORNTPOWER,TOTAL,TOUCHWOOD,TPHQ,TPLPLASTEH,TRACXN,'
+    'TRANSRAILL,TRANSWORLD,TREEHOUSE,TREJHARA,TREL,TRENT,TRF,TRIDENT,TRIGYN,'
+    'TRITURBINE,TRIVENI,TRU,TTKHLTCARE,TTKPRESTIG,TTL,TTML,TVSELECT,TVSHLTD,'
+    'TVSMOTOR,TVSSCS,TVSSRICHAK,TVTODAY,TVVISION,'
+    'UBL,UCAL,UCOBANK,UDAICEMENT,UDS,UEL,UFLEX,UFO,UGARSUGAR,UGROCAP,'
+    'UJJIVANSFB,ULTRACEMCO,UMAEXPORTS,UMESLTD,UMIYA-MRO,UNICHEMLAB,UNIDT,'
+    'UNIECOM,UNIENTER,UNIINFO,UNIMECH,UNIONBANK,UNIPARTS,UNITDSPR,UNITECH,'
+    'UNITEDPOLY,UNITEDTEA,UNIVASTU,UNIVCABLES,UNIVPHOTO,UNOMINDA,UPL,URAVIDEF,'
+    'URJA,USHAMART,USK,UTIAMC,UTKARSHBNK,UTTAMSUGAR,UYFINCORP,'
+    'V2RETAIL,VADILALIND,VAIBHAVGBL,VAISHALI,VAKRANGEE,VALIANTLAB,VALIANTORG,'
+    'VARDHACRLC,VARDMNPOLY,VARROC,VASCONEQ,VASWANI,VBL,VCL,VEDL,VEEDOL,VENKEYS,'
+    'VENTIVE,VENUSPIPES,VENUSREM,VERANDA,VERTOZ,VESUVIUS,VETO,VGUARD,VHL,VHLTD,'
+    'VIDHIING,VIJAYA,VIJIFIN,VIKASECO,VIKASLIFE,VIMTALABS,VINATIORGA,VINCOFE,'
+    'VINDHYATEL,VINEETLAB,VINNY,VINYLINDIA,VIPCLOTHNG,VIPIND,VIPULLTD,VIRINCHI,'
+    'VISAKAIND,VISASTEEL,VISHNU,VISHWARAJ,VIVIDHA,VLEGOV,VLSFINANCE,VMART,VMM,'
+    'VOLTAMP,VOLTAS,VPRPL,VRAJ,VRLLOG,VSSL,VSTIND,VSTL,VSTTILLERS,VTL,'
+    'WAAREEENER,WAAREERTL,WABAG,WALCHANNAG,WANBURY,WCIL,WEALTH,WEBELSOLAR,'
+    'WEIZMANIND,WEL,WELCORP,WELENT,WELINV,WELSPUNLIV,WENDT,WESTLIFE,WEWIN,'
+    'WHEELS,WHIRLPOOL,WILLAMAGOR,WINDLAS,WINDMACHIN,WINSOME,WIPL,WIPRO,'
+    'WOCKPHARMA,WONDERLA,WSI,WSTCSTPAPR,'
+    'XCHANGING,XELPMOC,XPROINDIA,XTGLOBAL,'
+    'YASHO,YATHARTH,YATRA,YESBANK,YUKEN,'
+    'ZAGGLE,ZEEL,ZEELEARN,ZEEMEDIA,ZENITHEXPO,ZENITHSTL,ZENSARTECH,ZENTEC,'
+    'ZFCVINDIA,ZIMLAB,ZODIAC,ZODIACLOTH,ZOTA,ZUARI,ZUARIIND,ZYDUSLIFE,ZYDUSWELL';
+
 class StockUniverse {
-  static const List<StockSymbol> nse = [
-    StockSymbol(symbol: 'RELIANCE', name: 'Reliance Industries', market: 'NSE', sector: 'Energy'),
-    StockSymbol(symbol: 'TCS', name: 'Tata Consultancy Services', market: 'NSE', sector: 'IT'),
-    StockSymbol(symbol: 'HDFCBANK', name: 'HDFC Bank', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'INFY', name: 'Infosys', market: 'NSE', sector: 'IT'),
-    StockSymbol(symbol: 'ICICIBANK', name: 'ICICI Bank', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'HINDUNILVR', name: 'Hindustan Unilever', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'ITC', name: 'ITC', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'SBIN', name: 'State Bank of India', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'BAJFINANCE', name: 'Bajaj Finance', market: 'NSE', sector: 'Finance'),
-    StockSymbol(symbol: 'BHARTIARTL', name: 'Bharti Airtel', market: 'NSE', sector: 'Telecom'),
-    StockSymbol(symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'WIPRO', name: 'Wipro', market: 'NSE', sector: 'IT'),
-    StockSymbol(symbol: 'LT', name: 'Larsen & Toubro', market: 'NSE', sector: 'Infrastructure'),
-    StockSymbol(symbol: 'AXISBANK', name: 'Axis Bank', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'ASIANPAINT', name: 'Asian Paints', market: 'NSE', sector: 'Consumer'),
-    StockSymbol(symbol: 'MARUTI', name: 'Maruti Suzuki', market: 'NSE', sector: 'Auto'),
-    StockSymbol(symbol: 'TITAN', name: 'Titan Company', market: 'NSE', sector: 'Consumer'),
-    StockSymbol(symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'ULTRACEMCO', name: 'UltraTech Cement', market: 'NSE', sector: 'Cement'),
-    StockSymbol(symbol: 'NESTLEIND', name: 'Nestle India', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'POWERGRID', name: 'Power Grid Corp', market: 'NSE', sector: 'Power'),
-    StockSymbol(symbol: 'NTPC', name: 'NTPC', market: 'NSE', sector: 'Power'),
-    StockSymbol(symbol: 'ONGC', name: 'ONGC', market: 'NSE', sector: 'Energy'),
-    StockSymbol(symbol: 'TECHM', name: 'Tech Mahindra', market: 'NSE', sector: 'IT'),
-    StockSymbol(symbol: 'HCLTECH', name: 'HCL Technologies', market: 'NSE', sector: 'IT'),
-    StockSymbol(symbol: 'INDUSINDBK', name: 'IndusInd Bank', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'BAJAJFINSV', name: 'Bajaj Finserv', market: 'NSE', sector: 'Finance'),
-    StockSymbol(symbol: 'DRREDDY', name: 'Dr Reddys Labs', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'CIPLA', name: 'Cipla', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'DIVISLAB', name: 'Divis Laboratories', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'EICHERMOT', name: 'Eicher Motors', market: 'NSE', sector: 'Auto'),
-    StockSymbol(symbol: 'HEROMOTOCO', name: 'Hero MotoCorp', market: 'NSE', sector: 'Auto'),
-    StockSymbol(symbol: 'TATACONSUM', name: 'Tata Consumer Products', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'TATASTEEL', name: 'Tata Steel', market: 'NSE', sector: 'Metals'),
-    StockSymbol(symbol: 'JSWSTEEL', name: 'JSW Steel', market: 'NSE', sector: 'Metals'),
-    StockSymbol(symbol: 'HINDALCO', name: 'Hindalco Industries', market: 'NSE', sector: 'Metals'),
-    StockSymbol(symbol: 'ADANIENT', name: 'Adani Enterprises', market: 'NSE', sector: 'Conglomerate'),
-    StockSymbol(symbol: 'ADANIPORTS', name: 'Adani Ports', market: 'NSE', sector: 'Infrastructure'),
-    StockSymbol(symbol: 'COALINDIA', name: 'Coal India', market: 'NSE', sector: 'Mining'),
-    StockSymbol(symbol: 'GRASIM', name: 'Grasim Industries', market: 'NSE', sector: 'Diversified'),
-    StockSymbol(symbol: 'BAJAJ-AUTO', name: 'Bajaj Auto', market: 'NSE', sector: 'Auto'),
-    StockSymbol(symbol: 'BRITANNIA', name: 'Britannia Industries', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'BPCL', name: 'BPCL', market: 'NSE', sector: 'Energy'),
-    StockSymbol(symbol: 'TATAPOWER', name: 'Tata Power', market: 'NSE', sector: 'Power'),
-    StockSymbol(symbol: 'TATAMOTORS', name: 'Tata Motors', market: 'NSE', sector: 'Auto'),
-    StockSymbol(symbol: 'M&M', name: 'Mahindra & Mahindra', market: 'NSE', sector: 'Auto'),
-    StockSymbol(symbol: 'SBILIFE', name: 'SBI Life Insurance', market: 'NSE', sector: 'Insurance'),
-    StockSymbol(symbol: 'HDFCLIFE', name: 'HDFC Life Insurance', market: 'NSE', sector: 'Insurance'),
-    StockSymbol(symbol: 'PIDILITIND', name: 'Pidilite Industries', market: 'NSE', sector: 'Chemicals'),
-    StockSymbol(symbol: 'APOLLOHOSP', name: 'Apollo Hospitals', market: 'NSE', sector: 'Healthcare'),
-    StockSymbol(symbol: 'DMART', name: 'Avenue Supermarts', market: 'NSE', sector: 'Retail'),
-    StockSymbol(symbol: 'ZOMATO', name: 'Zomato', market: 'NSE', sector: 'Internet'),
-    StockSymbol(symbol: 'NYKAA', name: 'Nykaa', market: 'NSE', sector: 'Internet'),
-    StockSymbol(symbol: 'PAYTM', name: 'Paytm', market: 'NSE', sector: 'Fintech'),
-    StockSymbol(symbol: 'IRCTC', name: 'IRCTC', market: 'NSE', sector: 'Travel'),
-    StockSymbol(symbol: 'HAL', name: 'HAL', market: 'NSE', sector: 'Defence'),
-    StockSymbol(symbol: 'BEL', name: 'Bharat Electronics', market: 'NSE', sector: 'Defence'),
-    StockSymbol(symbol: 'MUTHOOTFIN', name: 'Muthoot Finance', market: 'NSE', sector: 'Finance'),
-    StockSymbol(symbol: 'MARICO', name: 'Marico', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'GODREJCP', name: 'Godrej Consumer Products', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'DABUR', name: 'Dabur India', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'COLPAL', name: 'Colgate Palmolive', market: 'NSE', sector: 'FMCG'),
-    StockSymbol(symbol: 'TORNTPHARM', name: 'Torrent Pharma', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'LUPIN', name: 'Lupin', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'AUROPHARMA', name: 'Aurobindo Pharma', market: 'NSE', sector: 'Pharma'),
-    StockSymbol(symbol: 'PETRONET', name: 'Petronet LNG', market: 'NSE', sector: 'Energy'),
-    StockSymbol(symbol: 'IOC', name: 'Indian Oil Corp', market: 'NSE', sector: 'Energy'),
-    StockSymbol(symbol: 'VEDL', name: 'Vedanta', market: 'NSE', sector: 'Metals'),
-    StockSymbol(symbol: 'SAIL', name: 'Steel Authority of India', market: 'NSE', sector: 'Metals'),
-    StockSymbol(symbol: 'PFC', name: 'Power Finance Corp', market: 'NSE', sector: 'Finance'),
-    StockSymbol(symbol: 'REC', name: 'REC', market: 'NSE', sector: 'Finance'),
-    StockSymbol(symbol: 'CANBK', name: 'Canara Bank', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'BANKBARODA', name: 'Bank of Baroda', market: 'NSE', sector: 'Banking'),
-    StockSymbol(symbol: 'PNB', name: 'Punjab National Bank', market: 'NSE', sector: 'Banking'),
-  ];
+  static List<StockSymbol>? _nseCache;
+
+  /// Full NSE universe (~1 500 symbols). Uses curated name/sector where known.
+  static List<StockSymbol> get nse {
+    _nseCache ??= _nseSymbolsRaw.split(',').map((sym) {
+      final info = _nseInfoMap[sym];
+      return StockSymbol(
+        symbol: sym,
+        name: info?.name ?? sym,
+        market: 'NSE',
+        sector: info?.sector ?? 'NSE',
+      );
+    }).toList();
+    return _nseCache!;
+  }
 
   static const List<StockSymbol> us = [
-    StockSymbol(symbol: 'AAPL', name: 'Apple Inc.', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'MSFT', name: 'Microsoft Corp.', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'GOOGL', name: 'Alphabet Inc.', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'AMZN', name: 'Amazon.com Inc.', market: 'US', sector: 'Consumer'),
-    StockSymbol(symbol: 'NVDA', name: 'NVIDIA Corp.', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'META', name: 'Meta Platforms', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'TSLA', name: 'Tesla Inc.', market: 'US', sector: 'Auto'),
-    StockSymbol(symbol: 'BERKB', name: 'Berkshire Hathaway', market: 'US', sector: 'Finance'),
-    StockSymbol(symbol: 'LLY', name: 'Eli Lilly', market: 'US', sector: 'Pharma'),
-    StockSymbol(symbol: 'V', name: 'Visa Inc.', market: 'US', sector: 'Finance'),
-    StockSymbol(symbol: 'JPM', name: 'JPMorgan Chase', market: 'US', sector: 'Banking'),
-    StockSymbol(symbol: 'MA', name: 'Mastercard', market: 'US', sector: 'Finance'),
-    StockSymbol(symbol: 'UNH', name: 'UnitedHealth Group', market: 'US', sector: 'Healthcare'),
-    StockSymbol(symbol: 'XOM', name: 'Exxon Mobil', market: 'US', sector: 'Energy'),
-    StockSymbol(symbol: 'JNJ', name: 'Johnson & Johnson', market: 'US', sector: 'Healthcare'),
-    StockSymbol(symbol: 'HD', name: 'Home Depot', market: 'US', sector: 'Retail'),
-    StockSymbol(symbol: 'PG', name: 'Procter & Gamble', market: 'US', sector: 'Consumer'),
-    StockSymbol(symbol: 'AMD', name: 'Advanced Micro Devices', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'INTC', name: 'Intel Corp.', market: 'US', sector: 'Technology'),
-    StockSymbol(symbol: 'NFLX', name: 'Netflix Inc.', market: 'US', sector: 'Entertainment'),
+    StockSymbol(symbol: 'AAPL',  name: 'Apple Inc.',            market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'MSFT',  name: 'Microsoft Corp.',       market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'GOOGL', name: 'Alphabet Inc.',         market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'AMZN',  name: 'Amazon.com Inc.',       market: 'US', sector: 'Consumer'),
+    StockSymbol(symbol: 'NVDA',  name: 'NVIDIA Corp.',          market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'META',  name: 'Meta Platforms',        market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'TSLA',  name: 'Tesla Inc.',            market: 'US', sector: 'Auto'),
+    StockSymbol(symbol: 'BERKB', name: 'Berkshire Hathaway',    market: 'US', sector: 'Finance'),
+    StockSymbol(symbol: 'LLY',   name: 'Eli Lilly',            market: 'US', sector: 'Pharma'),
+    StockSymbol(symbol: 'V',     name: 'Visa Inc.',             market: 'US', sector: 'Finance'),
+    StockSymbol(symbol: 'JPM',   name: 'JPMorgan Chase',        market: 'US', sector: 'Banking'),
+    StockSymbol(symbol: 'MA',    name: 'Mastercard',            market: 'US', sector: 'Finance'),
+    StockSymbol(symbol: 'UNH',   name: 'UnitedHealth Group',    market: 'US', sector: 'Healthcare'),
+    StockSymbol(symbol: 'XOM',   name: 'Exxon Mobil',          market: 'US', sector: 'Energy'),
+    StockSymbol(symbol: 'JNJ',   name: 'Johnson & Johnson',     market: 'US', sector: 'Healthcare'),
+    StockSymbol(symbol: 'HD',    name: 'Home Depot',            market: 'US', sector: 'Retail'),
+    StockSymbol(symbol: 'PG',    name: 'Procter & Gamble',      market: 'US', sector: 'Consumer'),
+    StockSymbol(symbol: 'AMD',   name: 'Advanced Micro Devices',market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'INTC',  name: 'Intel Corp.',           market: 'US', sector: 'Technology'),
+    StockSymbol(symbol: 'NFLX',  name: 'Netflix Inc.',          market: 'US', sector: 'Entertainment'),
   ];
 
   static List<StockSymbol> getAll() => [...nse, ...us];
@@ -124,6 +405,17 @@ class StockUniverse {
   static List<StockSymbol> getByMarket(String market) =>
       getAll().where((s) => s.market == market).toList();
 
-  static List<String> get sectors =>
-      getAll().map((s) => s.sector).toSet().toList()..sort();
+  /// Unique sectors across the universe (excludes generic 'NSE' label).
+  static List<String> get sectors {
+    final known = getAll()
+        .map((s) => s.sector)
+        .where((s) => s != 'NSE')
+        .toSet()
+        .toList()
+      ..sort();
+    return known;
+  }
+
+  /// Total number of NSE symbols in the universe.
+  static int get nseCount => nse.length;
 }

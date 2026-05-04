@@ -99,7 +99,7 @@ class RsiFilterParams {
     this.overboughtLevel = 70.0,
     this.signal = FilterSignal.any,
     this.useDualRsi = false,
-    this.slowPeriod = 100,
+    this.slowPeriod = AppConstants.defaultRsiSlowPeriod,
     this.crossover = RsiCrossover.fastAboveSlow,
   });
 
@@ -293,6 +293,9 @@ class ScreenerFilter {
   /// 0 = only today's new signals, 3 = triggered within last 3 bars, etc.
   final int freshSignalMaxBars;
 
+  /// Maximum number of results to return (sorted by match score). 0 = unlimited.
+  final int maxResults;
+
   const ScreenerFilter({
     this.markets = const {'NSE'},
     this.sectors = const {},
@@ -314,6 +317,7 @@ class ScreenerFilter {
     this.requireAllFilters = true,
     this.requireFreshSignal = false,
     this.freshSignalMaxBars = 3,
+    this.maxResults = AppConstants.defaultMaxResults,
   });
 
   bool get hasAnyFilter =>
@@ -352,6 +356,7 @@ class ScreenerFilter {
     bool? requireAllFilters,
     bool? requireFreshSignal,
     int? freshSignalMaxBars,
+    int? maxResults,
   }) =>
       ScreenerFilter(
         markets: markets ?? this.markets,
@@ -374,5 +379,6 @@ class ScreenerFilter {
         requireAllFilters: requireAllFilters ?? this.requireAllFilters,
         requireFreshSignal: requireFreshSignal ?? this.requireFreshSignal,
         freshSignalMaxBars: freshSignalMaxBars ?? this.freshSignalMaxBars,
+        maxResults: maxResults ?? this.maxResults,
       );
 }

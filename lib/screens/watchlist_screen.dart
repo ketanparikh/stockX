@@ -1,205 +1,382 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/watchlist_entry.dart';
+import '../providers/alert_provider.dart';
 import '../providers/watchlist_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/stock_symbols.dart';
 
-class WatchlistScreen extends ConsumerWidget {
+class WatchlistScreen extends ConsumerStatefulWidget {
   const WatchlistScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final watchlist = ref.watch(watchlistProvider);
+  ConsumerState<WatchlistScreen> createState() => _WatchlistScreenState();
+}
+
+class _WatchlistScreenState extends ConsumerState<WatchlistScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Refresh alerts whenever screen is shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(alertProvider.notifier).refresh();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
+    final entries = ref.watch(watchlistEntriesProvider);
+    final alertState = ref.watch(alertProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Watchlist'),
+        title: Row(
+          children: [
+            const Text('Watchlist'),
+            if (alertState.hasAlerts) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.bearish.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.notifications_active_rounded, color: AppColors.bearish, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${alertState.count} alert${alertState.count > 1 ? 's' : ''}',
+                      style: const TextStyle(color: AppColors.bearish, fontSize: 12, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
         actions: [
-          if (watchlist.isNotEmpty)
+          if (alertState.hasAlerts)
+            IconButton(
+              icon: const Icon(Icons.notifications_off_outlined),
+              tooltip: 'Dismiss all alerts',
+              onPressed: () => ref.read(alertProvider.notifier).dismissAll(),
+            ),
+          IconButton(
+            icon: alertState.isChecking
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh alerts',
+            onPressed: () => ref.read(alertProvider.notifier).refresh(),
+          ),
+          if (entries.isNotEmpty)
             TextButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: AppColors.card,
-                    title: const Text(
-                      'Clear Watchlist',
-                      style: TextStyle(color: AppColors.textPrimary),
-                    ),
-                    content: const Text(
-                      'Remove all stocks from your watchlist?',
-                      style: TextStyle(color: AppColors.textSecondary),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          for (final sym in watchlist.toList()) {
-                            ref.read(watchlistProvider.notifier).remove(sym);
-                          }
-                          Navigator.pop(ctx);
-                        },
-                        style: TextButton.styleFrom(
-                            foregroundColor: AppColors.bearish),
-                        child: const Text('Clear All'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+              onPressed: () => _confirmClearAll(context, entries.keys.toList()),
               child: const Text('Clear All'),
             ),
         ],
       ),
-      body: watchlist.isEmpty
-          ? _buildEmpty()
-          : _buildWatchlist(context, ref, watchlist.toList()),
+      body: entries.isEmpty
+          ? _buildEmpty(c)
+          : _buildList(context, entries, alertState.bySymbol, c, scheme),
     );
   }
 
-  Widget _buildEmpty() {
+  void _confirmClearAll(BuildContext context, List<String> symbols) {
+    final c = context.appColors;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        title: Text('Clear Watchlist', style: TextStyle(color: c.textPrimary)),
+        content: Text('Remove all stocks from your watchlist?', style: TextStyle(color: c.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              for (final sym in symbols) {
+                ref.read(watchlistEntriesProvider.notifier).remove(sym);
+              }
+              ref.read(alertProvider.notifier).dismissAll();
+              Navigator.pop(ctx);
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.bearish),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmpty(AppSurfaces c) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceVariant,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.bookmark_outline,
-              color: AppColors.textMuted,
-              size: 48,
-            ),
+            decoration: BoxDecoration(color: c.surfaceVariant, shape: BoxShape.circle),
+            child: Icon(Icons.bookmark_outline, color: c.textMuted, size: 48),
           ),
           const SizedBox(height: 24),
-          const Text(
-            'Your watchlist is empty',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text('Your watchlist is empty',
+              style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Bookmark stocks from the screener results\nto track them here',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: c.textSecondary, fontSize: 14),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWatchlist(
+  Widget _buildList(
     BuildContext context,
-    WidgetRef ref,
-    List<String> symbols,
+    Map<String, WatchlistEntry> entries,
+    Map<String, List<WatchlistAlert>> alertsBySymbol,
+    AppSurfaces c,
+    ColorScheme scheme,
   ) {
+    final symbols = entries.keys.toList();
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 12),
       itemCount: symbols.length,
       itemBuilder: (context, index) {
         final symbol = symbols[index];
-        // Find stock info
+        final entry = entries[symbol]!;
+        final alerts = alertsBySymbol[symbol] ?? [];
+
         StockSymbol? stock;
         try {
           stock = StockUniverse.getAll().firstWhere((s) => s.symbol == symbol);
         } catch (_) {}
 
-        return Dismissible(
+        return _WatchlistTile(
+          symbol: symbol,
+          entry: entry,
+          stock: stock,
+          alerts: alerts,
+          onRemove: () {
+            ref.read(watchlistEntriesProvider.notifier).remove(symbol);
+            ref.read(alertProvider.notifier).dismissForSymbol(symbol);
+          },
+          onDismissAlerts: () => ref.read(alertProvider.notifier).dismissForSymbol(symbol),
+        );
+      },
+    );
+  }
+}
+
+// ── Individual tile ────────────────────────────────────────────────────────────
+
+class _WatchlistTile extends StatelessWidget {
+  final String symbol;
+  final WatchlistEntry entry;
+  final StockSymbol? stock;
+  final List<WatchlistAlert> alerts;
+  final VoidCallback onRemove;
+  final VoidCallback onDismissAlerts;
+
+  const _WatchlistTile({
+    required this.symbol,
+    required this.entry,
+    required this.stock,
+    required this.alerts,
+    required this.onRemove,
+    required this.onDismissAlerts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
+    final hasAlerts = alerts.isNotEmpty;
+
+    return Column(
+      children: [
+        Dismissible(
           key: Key(symbol),
           direction: DismissDirection.endToStart,
-          onDismissed: (_) {
-            ref.read(watchlistProvider.notifier).remove(symbol);
-          },
+          onDismissed: (_) => onRemove(),
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
-            color: AppColors.bearish.withOpacity(0.15),
+            color: AppColors.bearish.withValues(alpha: 0.15),
             child: const Icon(Icons.delete_outline, color: AppColors.bearish),
           ),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  symbol.substring(0, symbol.length > 2 ? 2 : symbol.length),
-                  style: const TextStyle(
-                    color: AppColors.primaryLight,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: hasAlerts ? AppColors.bearish.withValues(alpha: 0.05) : c.card,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: hasAlerts ? AppColors.bearish.withValues(alpha: 0.4) : c.border,
+                width: hasAlerts ? 1.5 : 1,
               ),
             ),
-            title: Text(
-              symbol,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
-            ),
-            subtitle: Text(
-              stock?.name ?? '',
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Column(
               children: [
-                if (stock != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  leading: Container(
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
+                      color: hasAlerts
+                          ? AppColors.bearish.withValues(alpha: 0.12)
+                          : scheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      stock.market,
-                      style: const TextStyle(
-                        color: AppColors.primaryLight,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                    child: Center(
+                      child: Text(
+                        symbol.substring(0, symbol.length > 2 ? 2 : symbol.length),
+                        style: TextStyle(
+                          color: hasAlerts ? AppColors.bearish : scheme.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(
-                    Icons.bookmark,
-                    color: AppColors.primary,
-                    size: 20,
+                  title: Row(
+                    children: [
+                      Text(symbol, style: TextStyle(color: c.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+                      if (hasAlerts) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.warning_amber_rounded, color: AppColors.bearish, size: 14),
+                      ],
+                    ],
                   ),
-                  onPressed: () {
-                    ref.read(watchlistProvider.notifier).remove(symbol);
-                  },
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (stock?.name != null)
+                        Text(stock!.name, style: TextStyle(color: c.textMuted, fontSize: 12)),
+                      Text(
+                        'Added ${_formatDate(entry.addedAt)}',
+                        style: TextStyle(color: c.textMuted, fontSize: 11),
+                      ),
+                      if (entry.savedSignals.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4,
+                          children: entry.savedSignals.map((s) => _SignalChip(saved: s)).toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (stock != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(stock!.market,
+                              style: TextStyle(color: scheme.primary, fontSize: 10, fontWeight: FontWeight.w600)),
+                        ),
+                      IconButton(
+                        icon: Icon(Icons.bookmark, color: scheme.primary, size: 20),
+                        onPressed: onRemove,
+                        tooltip: 'Remove from watchlist',
+                      ),
+                    ],
+                  ),
                 ),
+                // Alert detail rows
+                if (hasAlerts)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: Column(
+                      children: [
+                        Divider(height: 1, color: AppColors.bearish.withValues(alpha: 0.2)),
+                        const SizedBox(height: 8),
+                        ...alerts.map((a) => _AlertRow(alert: a, onDismiss: onDismissAlerts)),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inDays == 0) return 'today';
+    if (diff.inDays == 1) return 'yesterday';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+}
+
+// ── Small chips showing saved signals ─────────────────────────────────────────
+
+class _SignalChip extends StatelessWidget {
+  final SavedSignal saved;
+  const _SignalChip({required this.saved});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = saved.signal == 'buy'
+        ? AppColors.bullish
+        : saved.signal == 'sell'
+            ? AppColors.bearish
+            : AppColors.neutral;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        saved.indicatorName,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+// ── Single alert row ───────────────────────────────────────────────────────────
+
+class _AlertRow extends StatelessWidget {
+  final WatchlistAlert alert;
+  final VoidCallback onDismiss;
+  const _AlertRow({required this.alert, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.swap_horiz_rounded, color: AppColors.bearish, size: 14),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              alert.description,
+              style: const TextStyle(color: AppColors.bearish, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Icon(Icons.close_rounded, color: c.textMuted, size: 14),
+          ),
+        ],
+      ),
     );
   }
 }

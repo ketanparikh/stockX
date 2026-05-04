@@ -11,12 +11,16 @@ import '../models/screener_filter.dart';
 import '../models/screener_result.dart';
 import '../utils/constants.dart';
 import '../utils/stock_symbols.dart';
+import 'cache_service.dart';
+import 'data_sync_service.dart';
 import 'yahoo_finance_service.dart';
 
 class ScreenerService {
   final YahooFinanceService _financeService;
+  final CacheService _cache;
+  final DataSyncService _syncService;
 
-  ScreenerService(this._financeService);
+  ScreenerService(this._financeService, this._cache, this._syncService);
 
   Future<List<ScreenerResult>> runScreener(
     ScreenerFilter filter, {
@@ -29,9 +33,11 @@ class ScreenerService {
     final results = <ScreenerResult>[];
     int processed = 0;
 
-    // Max 5 concurrent requests to stay well within Yahoo Finance rate limits.
-    // Each fetch is a single candle call — no second quote call needed.
-    const batchSize = 5;
+    // 10 concurrent requests per batch; 150 ms inter-batch pause.
+    // This gives ~3–4 min for the full 1 500-stock NSE universe.
+    const batchSize = 10;
+    const batchDelay = Duration(milliseconds: 150);
+
     for (int i = 0; i < stocksToScreen.length; i += batchSize) {
       final end = (i + batchSize).clamp(0, stocksToScreen.length);
       final batch = stocksToScreen.sublist(i, end);
@@ -50,15 +56,15 @@ class ScreenerService {
       processed += batch.length;
       onProgress?.call(processed, stocksToScreen.length);
 
-      // Brief pause between batches so we don't hit Yahoo's rate limiter
       if (i + batchSize < stocksToScreen.length) {
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(batchDelay);
       }
     }
 
-    // Sort by match score descending
+    // Sort by match score descending, then cap to maxResults
     results.sort((a, b) => b.matchScore.compareTo(a.matchScore));
-    return results;
+    final cap = filter.maxResults;
+    return (cap > 0 && results.length > cap) ? results.sublist(0, cap) : results;
   }
 
   List<StockSymbol> _getStocksToScreen(ScreenerFilter filter) {
@@ -79,17 +85,16 @@ class ScreenerService {
     ScreenerFilter filter,
   ) async {
     try {
-      final range = filter.timeframe == Timeframe.weekly
-          ? '2y'
-          : filter.timeframe == Timeframe.monthly
-              ? '5y'
-              : '1y';
+      // Cache-first: skip the network call if we already have candle data.
+      List<CandleData> candles =
+          _cache.get(stock.symbol, filter.timeframe) ?? [];
 
-      final candles = await _financeService.fetchCandles(
-        stock.yahooSymbol,
-        filter.timeframe,
-        range: range,
-      );
+      if (candles.length < 2) {
+        // Cache miss — fetch live and populate the cache for future runs.
+        final fetched = await _syncService.fetchAndCache(stock, filter.timeframe);
+        if (fetched == null || fetched.length < 2) return null;
+        candles = fetched;
+      }
 
       if (candles.length < 2) return null;
 

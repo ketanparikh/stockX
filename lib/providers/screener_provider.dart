@@ -2,15 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/screener_filter.dart';
 import '../models/screener_result.dart';
 import '../services/screener_service.dart';
-import '../services/yahoo_finance_service.dart';
+import 'sync_provider.dart'
+    show
+        cacheServiceProvider,
+        dataSyncServiceProvider,
+        yahooFinanceServiceProvider;
 
-// Services
-final yahooFinanceServiceProvider = Provider<YahooFinanceService>((ref) {
-  return YahooFinanceService();
-});
+// Re-export so existing imports of yahooFinanceServiceProvider keep working
+export 'sync_provider.dart' show yahooFinanceServiceProvider;
 
 final screenerServiceProvider = Provider<ScreenerService>((ref) {
-  return ScreenerService(ref.watch(yahooFinanceServiceProvider));
+  return ScreenerService(
+    ref.watch(yahooFinanceServiceProvider),
+    ref.watch(cacheServiceProvider),
+    ref.watch(dataSyncServiceProvider),
+  );
 });
 
 // Filter state
@@ -115,6 +121,10 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
 
   void setFreshSignalMaxBars(int bars) {
     state = state.copyWith(freshSignalMaxBars: bars);
+  }
+
+  void setMaxResults(int value) {
+    state = state.copyWith(maxResults: value);
   }
 
   void reset() {

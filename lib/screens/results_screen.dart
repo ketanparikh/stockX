@@ -11,6 +11,7 @@ class ResultsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.appColors;
     final state = ref.watch(screenerProvider);
 
     return Scaffold(
@@ -24,7 +25,7 @@ class ResultsScreen extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.bullish.withOpacity(0.15),
+                    color: AppColors.bullish.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -48,26 +49,26 @@ class ResultsScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: _buildBody(context, state),
+      body: _buildBody(context, state, c),
     );
   }
 
-  Widget _buildBody(BuildContext context, ScreenerState state) {
+  Widget _buildBody(BuildContext context, ScreenerState state, AppSurfaces c) {
     switch (state.status) {
       case ScreenerStatus.running:
-        return _buildProgress(state);
+        return _buildProgress(state, c);
       case ScreenerStatus.success:
         return state.results.isEmpty
-            ? _buildEmpty()
-            : _buildResults(context, state.results);
+            ? _buildEmpty(c)
+            : _buildResults(context, state.results, c);
       case ScreenerStatus.error:
-        return _buildError(state.errorMessage);
+        return _buildError(state.errorMessage, c);
       case ScreenerStatus.idle:
-        return _buildIdle(context);
+        return _buildIdle(context, c);
     }
   }
 
-  Widget _buildProgress(ScreenerState state) {
+  Widget _buildProgress(ScreenerState state, AppSurfaces c) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -83,48 +84,34 @@ class ResultsScreen extends ConsumerWidget {
                   CircularProgressIndicator(
                     value: state.total > 0 ? state.progress : null,
                     strokeWidth: 4,
-                    backgroundColor: AppColors.border,
+                    backgroundColor: c.border,
                     color: AppColors.primary,
                   ),
                   if (state.total > 0)
                     Text(
                       '${(state.progress * 100).toInt()}%',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(color: c.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Scanning stocks...',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
               state.total > 0
                   ? 'Analyzed ${state.processed} of ${state.total} stocks'
                   : 'Fetching stock data...',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: c.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Computing RSI, Supertrend, Chandelier Exit\nand other indicators...',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: c.textMuted, fontSize: 12),
             ),
           ],
         ),
@@ -132,7 +119,7 @@ class ResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildResults(BuildContext context, List<ScreenerResult> results) {
+  Widget _buildResults(BuildContext context, List<ScreenerResult> results, AppSurfaces c) {
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -140,15 +127,9 @@ class ResultsScreen extends ConsumerWidget {
           sliver: SliverToBoxAdapter(
             child: Row(
               children: [
-                const Icon(Icons.filter_list, color: AppColors.textMuted, size: 16),
+                Icon(Icons.filter_list, color: c.textMuted, size: 16),
                 const SizedBox(width: 6),
-                Text(
-                  'Sorted by match score',
-                  style: const TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 12,
-                  ),
-                ),
+                Text('Sorted by match score', style: TextStyle(color: c.textMuted, fontSize: 12)),
               ],
             ),
           ),
@@ -167,7 +148,7 @@ class ResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(AppSurfaces c) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -176,33 +157,19 @@ class ResultsScreen extends ConsumerWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.search_off,
-                color: AppColors.textMuted,
-                size: 48,
-              ),
+              decoration: BoxDecoration(color: c.surfaceVariant, shape: BoxShape.circle),
+              child: Icon(Icons.search_off, color: c.textMuted, size: 48),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No stocks matched',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: c.textPrimary, fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Try relaxing your filter conditions\nor switching to "ANY" match mode',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: c.textSecondary, fontSize: 14),
             ),
           ],
         ),
@@ -210,7 +177,7 @@ class ResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildError(String? message) {
+  Widget _buildError(String? message, AppSurfaces c) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -219,22 +186,15 @@ class ResultsScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.error_outline, color: AppColors.bearish, size: 56),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Screener Error',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
               message ?? 'Something went wrong',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: c.textSecondary, fontSize: 13),
             ),
           ],
         ),
@@ -242,16 +202,16 @@ class ResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildIdle(BuildContext context) {
+  Widget _buildIdle(BuildContext context, AppSurfaces c) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.search, color: AppColors.textMuted, size: 56),
+          Icon(Icons.search, color: c.textMuted, size: 56),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Set your filters and run the screener',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: c.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 16),
           TextButton(

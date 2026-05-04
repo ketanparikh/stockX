@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/screener_filter.dart';
@@ -23,14 +23,14 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Stock Screener'),
+        title: Text('Stock Screener'),
         actions: [
           TextButton.icon(
             onPressed: () {
               ref.read(screenerFilterProvider.notifier).reset();
             },
-            icon: const Icon(Icons.refresh, size: 16),
-            label: const Text('Reset'),
+            icon: Icon(Icons.refresh, size: 16),
+            label: Text('Reset'),
           ),
           const SizedBox(width: 8),
         ],
@@ -133,8 +133,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         title,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          color: context.appColors.textSecondary,
           fontSize: 12,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
@@ -165,10 +165,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withOpacity(0.15)
-                        : AppColors.surfaceVariant,
+                        : context.appColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.border,
+                      color: selected ? AppColors.primary : context.appColors.border,
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -176,7 +176,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                     market,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: selected ? AppColors.primaryLight : AppColors.textSecondary,
+                      color: selected ? AppColors.primaryLight : context.appColors.textSecondary,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                       fontSize: 14,
                     ),
@@ -216,10 +216,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.accent.withOpacity(0.12)
-                        : AppColors.surfaceVariant,
+                        : context.appColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: selected ? AppColors.accent : AppColors.border,
+                      color: selected ? AppColors.accent : context.appColors.border,
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -227,7 +227,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                     tf.$2,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: selected ? AppColors.accent : AppColors.textSecondary,
+                      color: selected ? AppColors.accent : context.appColors.textSecondary,
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                       fontSize: 14,
                     ),
@@ -268,12 +268,12 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 decoration: BoxDecoration(
                   color: filter.sectors.isEmpty
                       ? AppColors.primary.withOpacity(0.15)
-                      : AppColors.surfaceVariant,
+                      : context.appColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: filter.sectors.isEmpty
                         ? AppColors.primary
-                        : AppColors.border,
+                        : context.appColors.border,
                   ),
                 ),
                 child: Text(
@@ -281,7 +281,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   style: TextStyle(
                     color: filter.sectors.isEmpty
                         ? AppColors.primaryLight
-                        : AppColors.textMuted,
+                        : context.appColors.textMuted,
                     fontSize: 12,
                     fontWeight: filter.sectors.isEmpty
                         ? FontWeight.w600
@@ -303,10 +303,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary.withOpacity(0.15)
-                        : AppColors.surfaceVariant,
+                        : context.appColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.border,
+                      color: selected ? AppColors.primary : context.appColors.border,
                     ),
                   ),
                   child: Text(
@@ -314,7 +314,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                     style: TextStyle(
                       color: selected
                           ? AppColors.primaryLight
-                          : AppColors.textMuted,
+                          : context.appColors.textMuted,
                       fontSize: 12,
                       fontWeight:
                           selected ? FontWeight.w600 : FontWeight.w400,
@@ -330,62 +330,185 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
   }
 
   Widget _buildFilterMatchMode(ScreenerFilter filter) {
+    final notifier = ref.read(screenerFilterProvider.notifier);
+
+    // Stock count for the selected markets
+    final stockCount = StockUniverse.getAll()
+        .where((s) => filter.markets.contains(s.market))
+        .length;
+    final isLargeUniverse = stockCount > 200;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: context.appColors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appColors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Filter Match Mode',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+          // Match mode row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Filter Match Mode',
+                      style: TextStyle(
+                        color: context.appColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Require all filters or any single filter to match',
+                      style: TextStyle(
+                        color: context.appColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 2),
-                Text(
-                  'Require all filters or any single filter to match',
-                  style: TextStyle(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment<bool>(
-                value: true,
-                label: Text('ALL', style: TextStyle(fontSize: 11)),
               ),
-              ButtonSegment<bool>(
-                value: false,
-                label: Text('ANY', style: TextStyle(fontSize: 11)),
+              const SizedBox(width: 12),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment<bool>(
+                    value: true,
+                    label: Text('ALL', style: TextStyle(fontSize: 11)),
+                  ),
+                  ButtonSegment<bool>(
+                    value: false,
+                    label: Text('ANY', style: TextStyle(fontSize: 11)),
+                  ),
+                ],
+                selected: {filter.requireAllFilters},
+                onSelectionChanged: (sel) {
+                  notifier.setRequireAllFilters(sel.first);
+                },
+                style: ButtonStyle(
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                  ),
+                ),
               ),
             ],
-            selected: {filter.requireAllFilters},
-            onSelectionChanged: (sel) {
-              ref
-                  .read(screenerFilterProvider.notifier)
-                  .setRequireAllFilters(sel.first);
-            },
-            style: ButtonStyle(
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+          ),
+
+          Divider(height: 20),
+
+          // Max results row
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Max Results',
+                      style: TextStyle(
+                        color: context.appColors.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Show top N matches sorted by score',
+                      style: TextStyle(color: context.appColors.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                filter.maxResults == 0 ? 'All' : '${filter.maxResults}',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: filter.maxResults == 0
+                ? 500
+                : filter.maxResults.toDouble().clamp(5, 500),
+            min: 5,
+            max: 500,
+            divisions: 99,
+            label: filter.maxResults == 0 ? 'All' : '${filter.maxResults}',
+            onChanged: (v) => notifier.setMaxResults(v.round() >= 500 ? 0 : v.round()),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              ...[20, 50, 100, 250].map((v) => GestureDetector(
+                onTap: () => notifier.setMaxResults(v),
+                child: Text(
+                  '$v',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: filter.maxResults == v
+                        ? AppColors.primary
+                        : context.appColors.textMuted,
+                    fontWeight: filter.maxResults == v
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                  ),
+                ),
+              )),
+              GestureDetector(
+                onTap: () => notifier.setMaxResults(0),
+                child: Text(
+                  'All',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: filter.maxResults == 0
+                        ? AppColors.primary
+                        : context.appColors.textMuted,
+                    fontWeight: filter.maxResults == 0
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // Performance notice for large universes
+          if (isLargeUniverse) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.timer_outlined, size: 14, color: Colors.orange),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '$stockCount stocks selected. Full scan may take 3–5 min. '
+                      'Use sector filters to narrow scope.',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -400,10 +523,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       decoration: BoxDecoration(
-        color: active ? AppColors.card : AppColors.surfaceVariant,
+        color: active ? context.appColors.card : context.appColors.surfaceVariant,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: active ? AppColors.accent.withOpacity(0.5) : AppColors.border,
+          color: active ? AppColors.accent.withOpacity(0.5) : context.appColors.border,
           width: active ? 1.5 : 1,
         ),
       ),
@@ -419,13 +542,13 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   decoration: BoxDecoration(
                     color: active
                         ? AppColors.accent.withOpacity(0.15)
-                        : AppColors.border.withOpacity(0.4),
+                        : context.appColors.border.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     Icons.bolt_rounded,
                     size: 18,
-                    color: active ? AppColors.accent : AppColors.textMuted,
+                    color: active ? AppColors.accent : context.appColors.textMuted,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -437,8 +560,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                         'Fresh Signals Only',
                         style: TextStyle(
                           color: active
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                              ? context.appColors.textPrimary
+                              : context.appColors.textSecondary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -447,8 +570,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                         active
                             ? 'Signal must have triggered within ${filter.freshSignalMaxBars} bar${filter.freshSignalMaxBars == 1 ? '' : 's'}'
                             : 'Find stocks where conditions just triggered',
-                        style: const TextStyle(
-                          color: AppColors.textMuted,
+                        style: TextStyle(
+                          color: context.appColors.textMuted,
                           fontSize: 11,
                         ),
                       ),
@@ -465,7 +588,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             ),
           ),
           if (active) ...[
-            const Divider(height: 1, color: AppColors.divider),
+            Divider(height: 1, color: context.appColors.divider),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
               child: Column(
@@ -474,10 +597,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Signal triggered within',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: context.appColors.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -492,7 +615,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                           filter.freshSignalMaxBars == 0
                               ? 'Today only'
                               : '${filter.freshSignalMaxBars} bar${filter.freshSignalMaxBars == 1 ? '' : 's'} ago',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.accent,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -527,17 +650,17 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                           decoration: BoxDecoration(
                             color: sel
                                 ? AppColors.accent.withOpacity(0.15)
-                                : AppColors.surfaceVariant,
+                                : context.appColors.surfaceVariant,
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
-                              color: sel ? AppColors.accent : AppColors.border,
+                              color: sel ? AppColors.accent : context.appColors.border,
                             ),
                           ),
                           child: Text(
                             days == 0 ? 'Today' : '≤ $days bar${days == 1 ? '' : 's'}',
                             style: TextStyle(
                               color:
-                                  sel ? AppColors.accent : AppColors.textMuted,
+                                  sel ? AppColors.accent : context.appColors.textMuted,
                               fontSize: 11,
                               fontWeight: sel
                                   ? FontWeight.w700
@@ -637,8 +760,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
   Widget _buildSubLabel(String text) {
     return Text(
       text,
-      style: const TextStyle(
-        color: AppColors.textMuted,
+      style: TextStyle(
+        color: context.appColors.textMuted,
         fontSize: 11,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.4,
@@ -658,10 +781,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
         decoration: BoxDecoration(
           color: p.useDualRsi
               ? AppColors.accent.withOpacity(0.1)
-              : AppColors.surfaceVariant,
+              : context.appColors.surfaceVariant,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: p.useDualRsi ? AppColors.accent : AppColors.border,
+            color: p.useDualRsi ? AppColors.accent : context.appColors.border,
             width: p.useDualRsi ? 1.5 : 1,
           ),
         ),
@@ -670,7 +793,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             Icon(
               Icons.compare_arrows_rounded,
               size: 18,
-              color: p.useDualRsi ? AppColors.accent : AppColors.textMuted,
+              color: p.useDualRsi ? AppColors.accent : context.appColors.textMuted,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -681,16 +804,16 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                     'Compare RSI Periods',
                     style: TextStyle(
                       color: p.useDualRsi
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
+                          ? context.appColors.textPrimary
+                          : context.appColors.textSecondary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     'Filter by fast RSI vs slow RSI crossover',
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
+                    style: TextStyle(
+                      color: context.appColors.textMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -740,10 +863,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? color.withOpacity(0.13)
-                    : AppColors.surfaceVariant,
+                    : context.appColors.surfaceVariant,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: isSelected ? color : AppColors.border,
+                  color: isSelected ? color : context.appColors.border,
                   width: isSelected ? 1.5 : 1,
                 ),
               ),
@@ -752,14 +875,14 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                   Icon(
                     opt.$3,
                     size: 16,
-                    color: isSelected ? color : AppColors.textMuted,
+                    color: isSelected ? color : context.appColors.textMuted,
                   ),
                   const SizedBox(height: 3),
                   Text(
                     opt.$2,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: isSelected ? color : AppColors.textMuted,
+                      color: isSelected ? color : context.appColors.textMuted,
                       fontSize: 11,
                       fontWeight:
                           isSelected ? FontWeight.w700 : FontWeight.w400,
@@ -785,19 +908,19 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       margin: const EdgeInsets.only(top: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
+        color: context.appColors.surfaceVariant,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: context.appColors.border),
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, size: 14, color: AppColors.textMuted),
+          Icon(Icons.info_outline, size: 14, color: context.appColors.textMuted),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               'Screening for: $crossoverLabel',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: context.appColors.textSecondary,
                 fontSize: 11,
               ),
             ),
@@ -828,8 +951,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             label: 'ATR Period',
             value: filter.supertrendParams.period.toDouble(),
             min: 5,
-            max: 20,
-            divisions: 15,
+            max: 50,
+            divisions: 45,
             onChanged: (v) => ref.read(screenerFilterProvider.notifier).updateSupertrendParams(
                   filter.supertrendParams.copyWith(period: v.toInt()),
                 ),
@@ -1079,8 +1202,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.background.withOpacity(0),
-            AppColors.background,
+            context.appColors.scaffold.withOpacity(0),
+            context.appColors.scaffold,
           ],
         ),
       ),
@@ -1094,13 +1217,13 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 margin: const EdgeInsets.only(right: 10),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceVariant,
+                  color: context.appColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: context.appColors.border),
                 ),
                 child: Text(
                   '${filter.activeFilterCount} filter${filter.activeFilterCount > 1 ? 's' : ''}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.primaryLight,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1124,14 +1247,14 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.search, size: 18),
+                    : Icon(Icons.search, size: 18),
                 label: Text(
                   screenerState.isRunning ? 'Scanning...' : 'Run Screener',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  disabledBackgroundColor: AppColors.border,
+                  disabledBackgroundColor: context.appColors.border,
                 ),
               ),
             ),
@@ -1141,3 +1264,6 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
     );
   }
 }
+
+
+

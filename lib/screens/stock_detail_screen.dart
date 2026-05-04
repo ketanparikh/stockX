@@ -14,6 +14,8 @@ class StockDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
     final quote = result.quote;
     final isWatched = ref.watch(watchlistProvider).contains(quote.symbol);
     final isPositive = quote.isPositive;
@@ -23,12 +25,12 @@ class StockDetailScreen extends ConsumerWidget {
         title: Text(quote.symbol),
         actions: [
           IconButton(
-            onPressed: () {
-              ref.read(watchlistProvider.notifier).toggle(quote.symbol);
-            },
+            onPressed: () => ref
+                .read(watchlistEntriesProvider.notifier)
+                .toggle(quote.symbol, result.indicators),
             icon: Icon(
               isWatched ? Icons.bookmark : Icons.bookmark_outline,
-              color: isWatched ? AppColors.primary : AppColors.textSecondary,
+              color: isWatched ? scheme.primary : c.textSecondary,
             ),
             tooltip: isWatched ? 'Remove from Watchlist' : 'Add to Watchlist',
           ),
@@ -36,21 +38,12 @@ class StockDetailScreen extends ConsumerWidget {
       ),
       body: CustomScrollView(
         slivers: [
-          // Price header
-          SliverToBoxAdapter(
-            child: _buildPriceHeader(quote, isPositive),
-          ),
-          // Chart
+          SliverToBoxAdapter(child: _buildPriceHeader(quote, isPositive, c, scheme)),
           if (result.candles.isNotEmpty)
-            SliverToBoxAdapter(
-              child: _buildPriceChart(result.candles, isPositive),
-            ),
-          // Indicators
+            SliverToBoxAdapter(child: _buildPriceChart(result.candles, isPositive, c)),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            sliver: SliverToBoxAdapter(
-              child: _buildSectionTitle('Technical Indicators'),
-            ),
+            sliver: SliverToBoxAdapter(child: _buildSectionTitle('Technical Indicators', c)),
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -64,13 +57,10 @@ class StockDetailScreen extends ConsumerWidget {
               ),
             ),
           ),
-          // Market Details
           if (quote.marketCap != null || quote.week52High != null)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              sliver: SliverToBoxAdapter(
-                child: _buildMarketDetails(quote),
-              ),
+              sliver: SliverToBoxAdapter(child: _buildMarketDetails(quote, c)),
             ),
           const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
         ],
@@ -78,27 +68,21 @@ class StockDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPriceHeader(StockQuote quote, bool isPositive) {
+  Widget _buildPriceHeader(StockQuote quote, bool isPositive, AppSurfaces c, ColorScheme scheme) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            quote.name,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
-          ),
+          Text(quote.name, style: TextStyle(color: c.textSecondary, fontSize: 14)),
           const SizedBox(height: 4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 _formatPrice(quote.price, quote.market),
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: c.textPrimary,
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
@@ -131,9 +115,9 @@ class StockDetailScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              _buildTag(quote.market, AppColors.primary),
+              _buildTag(quote.market, scheme.primary),
               const SizedBox(width: 6),
-              _buildTag(quote.sector, AppColors.accent),
+              _buildTag(quote.sector, scheme.secondary),
             ],
           ),
         ],
@@ -145,41 +129,31 @@ class StockDetailScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 
-  Widget _buildPriceChart(List<CandleData> candles, bool isPositive) {
+  Widget _buildPriceChart(List<CandleData> candles, bool isPositive, AppSurfaces c) {
     final chartCandles = candles.length > 90 ? candles.sublist(candles.length - 90) : candles;
-    final prices = chartCandles.map((c) => c.close).toList();
+    final prices = chartCandles.map((cd) => cd.close).toList();
     final minPrice = prices.reduce((a, b) => a < b ? a : b);
     final maxPrice = prices.reduce((a, b) => a > b ? a : b);
     final color = isPositive ? AppColors.bullish : AppColors.bearish;
 
-    final spots = List.generate(
-      prices.length,
-      (i) => FlSpot(i.toDouble(), prices[i]),
-    );
+    final spots = List.generate(prices.length, (i) => FlSpot(i.toDouble(), prices[i]));
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
       height: 180,
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: LineChart(
         LineChartData(
@@ -187,10 +161,7 @@ class StockDetailScreen extends ConsumerWidget {
             show: true,
             drawVerticalLine: false,
             horizontalInterval: (maxPrice - minPrice) / 4,
-            getDrawingHorizontalLine: (v) => const FlLine(
-              color: AppColors.divider,
-              strokeWidth: 0.5,
-            ),
+            getDrawingHorizontalLine: (v) => FlLine(color: c.divider, strokeWidth: 0.5),
           ),
           titlesData: FlTitlesData(
             leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -199,15 +170,10 @@ class StockDetailScreen extends ConsumerWidget {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 56,
-                getTitlesWidget: (value, meta) {
-                  return Text(
-                    _formatCompact(value),
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 9,
-                    ),
-                  );
-                },
+                getTitlesWidget: (value, meta) => Text(
+                  _formatCompact(value),
+                  style: TextStyle(color: c.textMuted, fontSize: 9),
+                ),
               ),
             ),
             bottomTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -230,26 +196,19 @@ class StockDetailScreen extends ConsumerWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    color.withOpacity(0.25),
-                    color.withOpacity(0.0),
-                  ],
+                  colors: [color.withValues(alpha: 0.25), color.withValues(alpha: 0.0)],
                 ),
               ),
             ),
           ],
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => AppColors.card,
-              tooltipBorder: const BorderSide(color: AppColors.border),
+              getTooltipColor: (_) => c.card,
+              tooltipBorder: BorderSide(color: c.border),
               getTooltipItems: (spots) => spots
                   .map((s) => LineTooltipItem(
                         _formatPrice(s.y, 'NSE'),
-                        const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        TextStyle(color: c.textPrimary, fontSize: 11, fontWeight: FontWeight.w600),
                       ))
                   .toList(),
             ),
@@ -259,107 +218,59 @@ class StockDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, AppSurfaces c) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
+      child: Text(title, style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
     );
   }
 
-  Widget _buildMarketDetails(StockQuote quote) {
+  Widget _buildMarketDetails(StockQuote quote, AppSurfaces c) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: c.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Market Details',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          Text('Market Details', style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           Row(
             children: [
               if (quote.week52High != null)
-                Expanded(
-                  child: _buildDetailItem(
-                    '52W High',
-                    _formatPrice(quote.week52High!, quote.market),
-                    AppColors.bullish,
-                  ),
-                ),
+                Expanded(child: _buildDetailItem('52W High', _formatPrice(quote.week52High!, quote.market), AppColors.bullish, c)),
               if (quote.week52Low != null)
-                Expanded(
-                  child: _buildDetailItem(
-                    '52W Low',
-                    _formatPrice(quote.week52Low!, quote.market),
-                    AppColors.bearish,
-                  ),
-                ),
+                Expanded(child: _buildDetailItem('52W Low', _formatPrice(quote.week52Low!, quote.market), AppColors.bearish, c)),
               if (quote.marketCap != null)
-                Expanded(
-                  child: _buildDetailItem(
-                    'Market Cap',
-                    _formatMarketCap(quote.marketCap!),
-                    AppColors.accent,
-                  ),
-                ),
+                Expanded(child: _buildDetailItem('Market Cap', _formatMarketCap(quote.marketCap!), AppColors.accent, c)),
             ],
           ),
           const SizedBox(height: 12),
-          _buildDetailItem(
-            'Volume',
-            _formatVolume(quote.volume),
-            AppColors.textSecondary,
-            isRow: true,
-          ),
+          _buildDetailItem('Volume', _formatVolume(quote.volume), c.textSecondary, c, isRow: true),
         ],
       ),
     );
   }
 
-  Widget _buildDetailItem(
-    String label,
-    String value,
-    Color color, {
-    bool isRow = false,
-  }) {
+  Widget _buildDetailItem(String label, String value, Color color, AppSurfaces c, {bool isRow = false}) {
     if (isRow) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 12)),
-          Text(value,
-              style: TextStyle(
-                  color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(label, style: TextStyle(color: c.textMuted, fontSize: 12)),
+          Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
         ],
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+        Text(label, style: TextStyle(color: c.textMuted, fontSize: 11)),
         const SizedBox(height: 2),
-        Text(value,
-            style: TextStyle(
-                color: color, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
       ],
     );
   }
