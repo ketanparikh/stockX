@@ -9,7 +9,7 @@ SUPABASE_ANON_KEY = "sb_publishable_qSkk1HaV4vOantlzM79wmQ_g_U6y5hi"
 # ── Fetch settings ────────────────────────────────────────────────────────────
 # How far back to pull candles for each timeframe.
 FETCH_RANGE = {
-    "1d":  "1y",   # ~252 daily bars
+    "1d":  "2y",   # ~500 daily bars (Sethi / 200 DMA needs 201+)
     "1wk": "2y",   # ~104 weekly bars
     "1mo": "5y",   # ~60  monthly bars
 }
@@ -22,4 +22,5 @@ BATCH_SIZE = 25
 BATCH_DELAY = 1.5
 
 # Minimum candle bars needed before a row is written to Supabase.
-MIN_BARS = 50
+# Sethi indicator needs 201+ daily bars for 200 DMA.
+MIN_BARS = 201

@@ -1,0 +1,16 @@
+RSI(25) vs RSI(100) + Chandelier Exit (22/3.0)
+Universe: 2051 symbols | Yahoo period=2y
+Long: RSI fast crosses above slow on signal bar, CE=BUY; exit bearish cross or CE SELL
+Short: RSI fast crosses below slow, CE=SELL; exit bullish cross or CE BUY
+Position: 10% of rolling equity, max 10/day
+
+CE BUY (long)
+  Trades: 3696  Win rate: 22.4%
+  Total PnL: INR -483,754.25
+CE SELL (short)
+  Trades: 3631  Win rate: 32.8%
+  Total PnL: INR 392,464.90
+
+Files:
+  backtest_output\rsi_ce_run\rsi25_100_ce_buy_trades.csv
+  backtest_output\rsi_ce_run\rsi25_100_ce_sell_trades.csv

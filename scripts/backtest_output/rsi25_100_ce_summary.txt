@@ -1,0 +1,16 @@
+RSI(25) vs RSI(100) + Chandelier Exit (22/3.0)
+Universe: 30 symbols | Yahoo period=2y
+Long: RSI fast crosses above slow on signal bar, CE=BUY; exit bearish cross or CE SELL
+Short: RSI fast crosses below slow, CE=SELL; exit bullish cross or CE BUY
+Position: 10% of rolling equity, max 10/day
+
+CE BUY (long)
+  Trades: 209  Win rate: 26.3%
+  Total PnL: INR 18,550.35
+CE SELL (short)
+  Trades: 183  Win rate: 37.7%
+  Total PnL: INR 16,068.96
+
+Files:
+  C:\MyData\Ketan\StockX\stockx\scripts\backtest_output\rsi25_100_ce_buy_trades.csv
+  C:\MyData\Ketan\StockX\stockx\scripts\backtest_output\rsi25_100_ce_sell_trades.csv
