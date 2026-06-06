@@ -71,7 +71,7 @@ class FilterSection extends StatelessWidget {
                       Text(
                         description,
                         style: TextStyle(color: c.textMuted, fontSize: 11),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],

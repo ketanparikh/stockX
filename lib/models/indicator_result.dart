@@ -197,3 +197,27 @@ class AdxResult extends IndicatorResult {
           signalAge: signalAge,
         );
 }
+
+class SethiResult extends IndicatorResult {
+  final bool setupActive;
+
+  SethiResult({
+    required double rsi,
+    required double priorHigh20,
+    required double dma50,
+    required double dma200,
+    required SignalType signal,
+    required this.setupActive,
+    int signalAge = 0,
+  }) : super(
+          name: 'Sethi',
+          value: rsi,
+          value2: priorHigh20,
+          value3: dma50,
+          signal: signal,
+          description: setupActive
+              ? 'Breakout setup (RSI ${rsi.toStringAsFixed(1)}, >20D high, 50>200 DMA)'
+              : 'No setup (RSI ${rsi.toStringAsFixed(1)})',
+          signalAge: signalAge,
+        );
+}

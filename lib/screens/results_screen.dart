@@ -109,7 +109,7 @@ class ResultsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Computing RSI, Supertrend, Chandelier Exit\nand other indicators...',
+              'Computing Sethi, RSI, Supertrend, Chandelier Exit\nand other indicators...',
               textAlign: TextAlign.center,
               style: TextStyle(color: c.textMuted, fontSize: 12),
             ),

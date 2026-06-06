@@ -163,6 +163,6 @@ class DataSyncService {
   static String _rangeFor(String timeframe) {
     if (timeframe == Timeframe.weekly) return '2y';
     if (timeframe == Timeframe.monthly) return '5y';
-    return '1y';
+    return '2y'; // daily: 200 DMA + Sethi breakout needs 201+ bars
   }
 }

@@ -1,4 +1,5 @@
 import '../indicators/adx_indicator.dart';
+import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
 import '../indicators/chandelier_exit_indicator.dart';
 import '../indicators/ema_indicator.dart';
@@ -85,6 +86,9 @@ class AlertService {
 
     final adx = AdxIndicator.calculate(candles, const AdxFilterParams());
     if (adx != null) results.add(adx);
+
+    final sethi = SethiIndicator.calculate(candles, const SethiFilterParams());
+    if (sethi != null) results.add(sethi);
 
     return results;
   }

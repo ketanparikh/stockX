@@ -112,6 +112,49 @@ class SupabaseService {
     return result;
   }
 
+  // ── Screener filter cache (see supabase_schema.sql) ───────────────────────
+
+  static const _screenerFilterCacheTable = 'screener_filter_cache';
+
+  /// Returns `payload` + `built_at`, or null if missing / error.
+  Future<Map<String, dynamic>?> readScreenerFilterCache(
+    String filterHash,
+    String timeframe,
+  ) async {
+    if (!isAvailable) return null;
+    try {
+      final row = await _db
+          .from(_screenerFilterCacheTable)
+          .select('payload,built_at')
+          .eq('filter_hash', filterHash)
+          .eq('timeframe', timeframe)
+          .maybeSingle();
+      if (row == null) return null;
+      return Map<String, dynamic>.from(row as Map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> writeScreenerFilterCache(
+    String filterHash,
+    String timeframe,
+    Map<String, dynamic> payload,
+  ) async {
+    if (!isAvailable) return;
+    try {
+      await _db.from(_screenerFilterCacheTable).upsert(
+        {
+          'filter_hash': filterHash,
+          'timeframe': timeframe,
+          'built_at': DateTime.now().toUtc().toIso8601String(),
+          'payload': payload,
+        },
+        onConflict: 'filter_hash,timeframe',
+      );
+    } catch (_) {}
+  }
+
   // ── Decode ───────────────────────────────────────────────────────────────
 
   static List<CandleData>? _decode(Map<String, dynamic> row) {

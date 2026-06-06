@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Python (fetch scripts local venv — do not commit)
+.venv/
+venv/
+**/__pycache__/
+*.py[cod]

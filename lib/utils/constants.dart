@@ -21,7 +21,23 @@ class AppConstants {
   static const double defaultBollingerStdDev = 2.0;
   static const int defaultAdxPeriod = 14;
 
+  // Sethi breakout strategy (matches nse_full_market_backtest.py entry rules)
+  static const int defaultSethiHighLookback = 20;
+  static const int defaultSethiDmaFast = 50;
+  static const int defaultSethiDmaSlow = 200;
+  static const int defaultSethiVolumeLookback = 20;
+  static const double defaultSethiVolumeMultiplier = 1.5;
+  static const int defaultSethiRsiPeriod = 14;
+  static const double defaultSethiRsiMin = 60.0;
+  static const double defaultSethiRsiMax = 80.0;
+  static const double defaultSethiMinPrice = 50.0;
+  static const double defaultSethiMinAvgValue = 10000000.0; // INR 1 crore
+
   static const int maxCandlesForIndicators = 300;
+
+  /// Supabase `screener_filter_cache` rows older than this are ignored; a new
+  /// full screener run refreshes the cache.
+  static const Duration screenerFilterCacheTtl = Duration(hours: 4);
 }
 
 class StockMarket {

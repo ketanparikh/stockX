@@ -9,6 +9,7 @@ enum IndicatorType {
   emaCrossover,
   bollingerBands,
   adx,
+  sethi,
 }
 
 extension IndicatorTypeExt on IndicatorType {
@@ -28,6 +29,8 @@ extension IndicatorTypeExt on IndicatorType {
         return 'Bollinger Bands';
       case IndicatorType.adx:
         return 'ADX';
+      case IndicatorType.sethi:
+        return 'Sethi';
     }
   }
 
@@ -47,6 +50,8 @@ extension IndicatorTypeExt on IndicatorType {
         return 'Volatility bands around a moving average';
       case IndicatorType.adx:
         return 'Average Directional Index measuring trend strength';
+      case IndicatorType.sethi:
+        return '20-day breakout with trend, volume surge, and RSI confirmation';
     }
   }
 
@@ -66,6 +71,8 @@ extension IndicatorTypeExt on IndicatorType {
         return Icons.compress;
       case IndicatorType.adx:
         return Icons.speed;
+      case IndicatorType.sethi:
+        return Icons.rocket_launch_outlined;
     }
   }
 }
@@ -265,6 +272,61 @@ class AdxFilterParams {
       );
 }
 
+class SethiFilterParams {
+  final int highLookback;
+  final int dmaFastPeriod;
+  final int dmaSlowPeriod;
+  final int volumeLookback;
+  final double volumeMultiplier;
+  final int rsiPeriod;
+  final double rsiMin;
+  final double rsiMax;
+  final double minPrice;
+  final double minAvgValue;
+  final String signal;
+
+  const SethiFilterParams({
+    this.highLookback = AppConstants.defaultSethiHighLookback,
+    this.dmaFastPeriod = AppConstants.defaultSethiDmaFast,
+    this.dmaSlowPeriod = AppConstants.defaultSethiDmaSlow,
+    this.volumeLookback = AppConstants.defaultSethiVolumeLookback,
+    this.volumeMultiplier = AppConstants.defaultSethiVolumeMultiplier,
+    this.rsiPeriod = AppConstants.defaultSethiRsiPeriod,
+    this.rsiMin = AppConstants.defaultSethiRsiMin,
+    this.rsiMax = AppConstants.defaultSethiRsiMax,
+    this.minPrice = AppConstants.defaultSethiMinPrice,
+    this.minAvgValue = AppConstants.defaultSethiMinAvgValue,
+    this.signal = FilterSignal.buy,
+  });
+
+  SethiFilterParams copyWith({
+    int? highLookback,
+    int? dmaFastPeriod,
+    int? dmaSlowPeriod,
+    int? volumeLookback,
+    double? volumeMultiplier,
+    int? rsiPeriod,
+    double? rsiMin,
+    double? rsiMax,
+    double? minPrice,
+    double? minAvgValue,
+    String? signal,
+  }) =>
+      SethiFilterParams(
+        highLookback: highLookback ?? this.highLookback,
+        dmaFastPeriod: dmaFastPeriod ?? this.dmaFastPeriod,
+        dmaSlowPeriod: dmaSlowPeriod ?? this.dmaSlowPeriod,
+        volumeLookback: volumeLookback ?? this.volumeLookback,
+        volumeMultiplier: volumeMultiplier ?? this.volumeMultiplier,
+        rsiPeriod: rsiPeriod ?? this.rsiPeriod,
+        rsiMin: rsiMin ?? this.rsiMin,
+        rsiMax: rsiMax ?? this.rsiMax,
+        minPrice: minPrice ?? this.minPrice,
+        minAvgValue: minAvgValue ?? this.minAvgValue,
+        signal: signal ?? this.signal,
+      );
+}
+
 class ScreenerFilter {
   final Set<String> markets;
   final Set<String> sectors;
@@ -283,6 +345,8 @@ class ScreenerFilter {
   final BollingerFilterParams bollingerParams;
   final bool useAdx;
   final AdxFilterParams adxParams;
+  final bool useSethi;
+  final SethiFilterParams sethiParams;
   final bool requireAllFilters;
 
   /// When true, only include stocks where ALL matching indicators
@@ -314,6 +378,8 @@ class ScreenerFilter {
     this.bollingerParams = const BollingerFilterParams(),
     this.useAdx = false,
     this.adxParams = const AdxFilterParams(),
+    this.useSethi = false,
+    this.sethiParams = const SethiFilterParams(),
     this.requireAllFilters = true,
     this.requireFreshSignal = false,
     this.freshSignalMaxBars = 3,
@@ -321,7 +387,14 @@ class ScreenerFilter {
   });
 
   bool get hasAnyFilter =>
-      useRsi || useSupertrend || useChandelier || useMacd || useEma || useBollinger || useAdx;
+      useRsi ||
+      useSupertrend ||
+      useChandelier ||
+      useMacd ||
+      useEma ||
+      useBollinger ||
+      useAdx ||
+      useSethi;
 
   int get activeFilterCount {
     int count = 0;
@@ -332,6 +405,7 @@ class ScreenerFilter {
     if (useEma) count++;
     if (useBollinger) count++;
     if (useAdx) count++;
+    if (useSethi) count++;
     return count;
   }
 
@@ -353,6 +427,8 @@ class ScreenerFilter {
     BollingerFilterParams? bollingerParams,
     bool? useAdx,
     AdxFilterParams? adxParams,
+    bool? useSethi,
+    SethiFilterParams? sethiParams,
     bool? requireAllFilters,
     bool? requireFreshSignal,
     int? freshSignalMaxBars,
@@ -376,6 +452,8 @@ class ScreenerFilter {
         bollingerParams: bollingerParams ?? this.bollingerParams,
         useAdx: useAdx ?? this.useAdx,
         adxParams: adxParams ?? this.adxParams,
+        useSethi: useSethi ?? this.useSethi,
+        sethiParams: sethiParams ?? this.sethiParams,
         requireAllFilters: requireAllFilters ?? this.requireAllFilters,
         requireFreshSignal: requireFreshSignal ?? this.requireFreshSignal,
         freshSignalMaxBars: freshSignalMaxBars ?? this.freshSignalMaxBars,

@@ -1,4 +1,5 @@
 import '../indicators/adx_indicator.dart';
+import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
 import '../indicators/chandelier_exit_indicator.dart';
 import '../indicators/ema_indicator.dart';
@@ -9,18 +10,20 @@ import '../models/candle_data.dart';
 import '../models/indicator_result.dart';
 import '../models/screener_filter.dart';
 import '../models/screener_result.dart';
+import '../models/screener_result_codec.dart';
 import '../utils/constants.dart';
+import '../utils/screener_filter_fingerprint.dart';
 import '../utils/stock_symbols.dart';
 import 'cache_service.dart';
 import 'data_sync_service.dart';
-import 'yahoo_finance_service.dart';
+import 'supabase_service.dart';
 
 class ScreenerService {
-  final YahooFinanceService _financeService;
   final CacheService _cache;
   final DataSyncService _syncService;
+  final SupabaseService _supabase;
 
-  ScreenerService(this._financeService, this._cache, this._syncService);
+  ScreenerService(this._cache, this._syncService, this._supabase);
 
   Future<List<ScreenerResult>> runScreener(
     ScreenerFilter filter, {
@@ -30,13 +33,63 @@ class ScreenerService {
     final stocksToScreen = _getStocksToScreen(filter);
     if (stocksToScreen.isEmpty) return [];
 
+    // Bulk-load candles from Supabase into the session cache (few HTTP calls).
+    // Avoids thousands of per-stock Yahoo requests when data was pre-filled
+    // by fetch_nse_data.py / in-app sync.
+    if (_supabase.isAvailable) {
+      final symbols = stocksToScreen.map((s) => s.symbol).toList();
+      final fromCloud = await _supabase.readBatch(symbols, filter.timeframe);
+      for (final entry in fromCloud.entries) {
+        if (entry.value.length >= 2) {
+          _cache.store(entry.key, filter.timeframe, entry.value);
+        }
+      }
+    }
+
+    final String? filterCacheHash =
+        filter.hasAnyFilter && _supabase.isAvailable
+            ? screenerFilterCacheHash(filter)
+            : null;
+
+    if (filterCacheHash != null) {
+      final row =
+          await _supabase.readScreenerFilterCache(filterCacheHash, filter.timeframe);
+      if (row != null) {
+        final builtAt = _parseUtc(row['built_at']);
+        final payloadRaw = row['payload'];
+        if (builtAt != null &&
+            DateTime.now().toUtc().difference(builtAt) <=
+                AppConstants.screenerFilterCacheTtl &&
+            payloadRaw is Map) {
+          final payload = Map<String, dynamic>.from(payloadRaw);
+          final cached = decodeScreenerResultsPayload(
+            payload,
+            (sym) => _cache.get(sym, filter.timeframe) ?? const [],
+          );
+          if (cached.isNotEmpty) {
+            onProgress?.call(stocksToScreen.length, stocksToScreen.length);
+            return _applyMaxResults(cached, filter.maxResults);
+          }
+        }
+      }
+    }
+
+    // After a warm cache, use higher concurrency and shorter pauses so the
+    // screener is CPU-bound instead of waiting on artificial throttling.
+    final cacheRatio = _cacheCoverageRatio(stocksToScreen, filter.timeframe);
+    final batchSize = cacheRatio >= 0.85
+        ? 40
+        : cacheRatio >= 0.5
+            ? 25
+            : 12;
+    final batchDelay = cacheRatio >= 0.85
+        ? Duration.zero
+        : cacheRatio >= 0.5
+            ? const Duration(milliseconds: 40)
+            : const Duration(milliseconds: 120);
+
     final results = <ScreenerResult>[];
     int processed = 0;
-
-    // 10 concurrent requests per batch; 150 ms inter-batch pause.
-    // This gives ~3–4 min for the full 1 500-stock NSE universe.
-    const batchSize = 10;
-    const batchDelay = Duration(milliseconds: 150);
 
     for (int i = 0; i < stocksToScreen.length; i += batchSize) {
       final end = (i + batchSize).clamp(0, stocksToScreen.length);
@@ -56,15 +109,35 @@ class ScreenerService {
       processed += batch.length;
       onProgress?.call(processed, stocksToScreen.length);
 
-      if (i + batchSize < stocksToScreen.length) {
+      if (i + batchSize < stocksToScreen.length && batchDelay > Duration.zero) {
         await Future.delayed(batchDelay);
       }
     }
 
-    // Sort by match score descending, then cap to maxResults
     results.sort((a, b) => b.matchScore.compareTo(a.matchScore));
-    final cap = filter.maxResults;
-    return (cap > 0 && results.length > cap) ? results.sublist(0, cap) : results;
+    final finalResults = _applyMaxResults(results, filter.maxResults);
+
+    if (filterCacheHash != null && finalResults.isNotEmpty) {
+      _supabase
+          .writeScreenerFilterCache(
+            filterCacheHash,
+            filter.timeframe,
+            encodeScreenerResultsPayload(finalResults),
+          )
+          .ignore();
+    }
+
+    return finalResults;
+  }
+
+  DateTime? _parseUtc(Object? raw) {
+    if (raw is String) return DateTime.tryParse(raw)?.toUtc();
+    return null;
+  }
+
+  List<ScreenerResult> _applyMaxResults(List<ScreenerResult> rows, int cap) {
+    if (cap > 0 && rows.length > cap) return rows.sublist(0, cap);
+    return rows;
   }
 
   List<StockSymbol> _getStocksToScreen(ScreenerFilter filter) {
@@ -78,6 +151,17 @@ class ScreenerService {
       }
       return true;
     }).toList();
+  }
+
+  /// Share of [stocks] that already have at least two candles in cache.
+  double _cacheCoverageRatio(List<StockSymbol> stocks, String timeframe) {
+    if (stocks.isEmpty) return 0;
+    int ok = 0;
+    for (final s in stocks) {
+      final c = _cache.get(s.symbol, timeframe);
+      if (c != null && c.length >= 2) ok++;
+    }
+    return ok / stocks.length;
   }
 
   Future<ScreenerResult?> _processStock(
@@ -138,6 +222,13 @@ class ScreenerService {
     final change = last.close - prev.close;
     final changePct = prev.close != 0 ? (change / prev.close) * 100 : 0.0;
 
+    var week52High = candles.first.high;
+    var week52Low = candles.first.low;
+    for (final c in candles) {
+      if (c.high > week52High) week52High = c.high;
+      if (c.low < week52Low) week52Low = c.low;
+    }
+
     return StockQuote(
       symbol: stock.symbol,
       name: stock.name,
@@ -147,8 +238,8 @@ class ScreenerService {
       change: change,
       changePercent: changePct,
       volume: last.volume,
-      week52High: candles.map((c) => c.high).reduce((a, b) => a > b ? a : b),
-      week52Low: candles.map((c) => c.low).reduce((a, b) => a < b ? a : b),
+      week52High: week52High,
+      week52Low: week52Low,
     );
   }
 
@@ -193,6 +284,11 @@ class ScreenerService {
       if (result != null) indicators.add(result);
     }
 
+    if (filter.useSethi) {
+      final result = SethiIndicator.calculate(candles, filter.sethiParams);
+      if (result != null) indicators.add(result);
+    }
+
     return indicators;
   }
 
@@ -210,6 +306,8 @@ class ScreenerService {
         return BollingerBandsIndicator.matchesFilter(indicator as BollingerResult, filter.bollingerParams);
       case 'ADX':
         return AdxIndicator.matchesFilter(indicator as AdxResult, filter.adxParams);
+      case 'Sethi':
+        return SethiIndicator.matchesFilter(indicator as SethiResult, filter.sethiParams);
       default:
         if (indicator.name.startsWith('EMA')) {
           return EmaIndicator.matchesFilter(indicator as EmaResult, filter.emaParams);
@@ -266,6 +364,9 @@ class ScreenerService {
 
     final adx = AdxIndicator.calculate(candles, const AdxFilterParams());
     if (adx != null) indicators.add(adx);
+
+    final sethi = SethiIndicator.calculate(candles, const SethiFilterParams());
+    if (sethi != null) indicators.add(sethi);
 
     return indicators;
   }

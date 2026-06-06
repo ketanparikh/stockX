@@ -42,6 +42,12 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 sliver: SliverToBoxAdapter(
+                  child: _buildSethiQuickCard(filter),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(
                   child: _buildMarketSection(filter),
                 ),
               ),
@@ -74,6 +80,11 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 sliver: SliverToBoxAdapter(
                   child: _buildSectionHeader('Technical Indicators'),
                 ),
+              ),
+              // Sethi breakout (NSE backtest strategy)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                sliver: SliverToBoxAdapter(child: _buildSethiFilter(filter)),
               ),
               // RSI Filter
               SliverPadding(
@@ -139,6 +150,88 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
         ),
+      ),
+    );
+  }
+
+  /// Always-visible Sethi entry on mobile (first card on Screener tab).
+  Widget _buildSethiQuickCard(ScreenerFilter filter) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
+    final on = filter.useSethi;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: on
+              ? [AppColors.accent.withValues(alpha: 0.18), c.card]
+              : [c.surfaceVariant, c.card],
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: on ? AppColors.accent.withValues(alpha: 0.55) : c.border,
+          width: on ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.rocket_launch_outlined, color: AppColors.accent, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Sethi Strategy',
+                      style: TextStyle(
+                        color: c.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'NEW',
+                        style: TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '20D breakout + trend + volume + RSI',
+                  style: TextStyle(color: c.textMuted, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: on,
+            activeColor: scheme.primary,
+            onChanged: (v) => ref.read(screenerFilterProvider.notifier).toggleSethi(v),
+          ),
+        ],
       ),
     );
   }
@@ -1146,6 +1239,60 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             formatter: (v) => v.toStringAsFixed(1),
             onChanged: (v) => ref.read(screenerFilterProvider.notifier).updateBollingerParams(
                   filter.bollingerParams.copyWith(stdDev: v),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSethiFilter(ScreenerFilter filter) {
+    return FilterSection(
+      title: 'Sethi',
+      icon: Icons.rocket_launch_outlined,
+      description:
+          '20-day high breakout, 50>200 DMA, volume surge, RSI 60–80',
+      enabled: filter.useSethi,
+      onToggle: (v) => ref.read(screenerFilterProvider.notifier).toggleSethi(v),
+      child: Column(
+        children: [
+          SignalSelector(
+            value: filter.sethiParams.signal,
+            onChanged: (s) => ref.read(screenerFilterProvider.notifier).updateSethiParams(
+                  filter.sethiParams.copyWith(signal: s),
+                ),
+            options: const ['BUY', 'ANY', 'NEUTRAL'],
+          ),
+          const SizedBox(height: 10),
+          LabeledSlider(
+            label: 'RSI Min',
+            value: filter.sethiParams.rsiMin,
+            min: 50,
+            max: 70,
+            divisions: 20,
+            onChanged: (v) => ref.read(screenerFilterProvider.notifier).updateSethiParams(
+                  filter.sethiParams.copyWith(rsiMin: v),
+                ),
+          ),
+          LabeledSlider(
+            label: 'RSI Max',
+            value: filter.sethiParams.rsiMax,
+            min: 70,
+            max: 90,
+            divisions: 20,
+            onChanged: (v) => ref.read(screenerFilterProvider.notifier).updateSethiParams(
+                  filter.sethiParams.copyWith(rsiMax: v),
+                ),
+          ),
+          LabeledSlider(
+            label: 'Volume vs 20D Avg',
+            value: filter.sethiParams.volumeMultiplier,
+            min: 1.0,
+            max: 3.0,
+            divisions: 20,
+            formatter: (v) => '${v.toStringAsFixed(1)}x',
+            onChanged: (v) => ref.read(screenerFilterProvider.notifier).updateSethiParams(
+                  filter.sethiParams.copyWith(volumeMultiplier: v),
                 ),
           ),
         ],
