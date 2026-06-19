@@ -39,19 +39,20 @@ class SupertrendIndicator {
       upperBand[i] = (basicUpper < upperBand[i - 1] || prevC.close > upperBand[i - 1])
           ? basicUpper : upperBand[i - 1];
 
+      // TradingView / Zerodha: flip uses previous bar's final band (not today's).
       if (isBull[i - 1]) {
-        isBull[i] = c.close >= lowerBand[i];
+        isBull[i] = c.close >= lowerBand[i - 1];
       } else {
-        isBull[i] = c.close > upperBand[i];
+        isBull[i] = c.close > upperBand[i - 1];
       }
       supertrend[i] = isBull[i] ? lowerBand[i] : upperBand[i];
     }
 
-    // Signal age: scan isBull history from the end
+    // Signal age: scan full history so long-running trends show correct duration.
     final signals = isBull
         .map((b) => b ? SignalType.buy : SignalType.sell)
         .toList();
-    final age = IndicatorUtils.signalAge(signals);
+    final age = IndicatorUtils.signalAge(signals, maxLookback: signals.length);
 
     final bullish = isBull.last;
     return SupertrendResult(

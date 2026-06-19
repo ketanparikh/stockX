@@ -16,6 +16,8 @@ class ScreenerScreen extends ConsumerStatefulWidget {
 }
 
 class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
+  bool _sectorFilterEnabled = false;
+
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(screenerFilterProvider);
@@ -28,6 +30,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
           TextButton.icon(
             onPressed: () {
               ref.read(screenerFilterProvider.notifier).reset();
+              setState(() => _sectorFilterEnabled = false);
             },
             icon: Icon(Icons.refresh, size: 16),
             label: Text('Reset'),
@@ -41,12 +44,6 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                sliver: SliverToBoxAdapter(
-                  child: _buildSethiQuickCard(filter),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 sliver: SliverToBoxAdapter(
                   child: _buildMarketSection(filter),
                 ),
@@ -154,88 +151,6 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
     );
   }
 
-  /// Always-visible Sethi entry on mobile (first card on Screener tab).
-  Widget _buildSethiQuickCard(ScreenerFilter filter) {
-    final c = context.appColors;
-    final scheme = Theme.of(context).colorScheme;
-    final on = filter.useSethi;
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: on
-              ? [AppColors.accent.withValues(alpha: 0.18), c.card]
-              : [c.surfaceVariant, c.card],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: on ? AppColors.accent.withValues(alpha: 0.55) : c.border,
-          width: on ? 1.5 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.rocket_launch_outlined, color: AppColors.accent, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Sethi Strategy',
-                      style: TextStyle(
-                        color: c.textPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        'NEW',
-                        style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '20D breakout + trend + volume + RSI',
-                  style: TextStyle(color: c.textMuted, fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: on,
-            activeColor: scheme.primary,
-            onChanged: (v) => ref.read(screenerFilterProvider.notifier).toggleSethi(v),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMarketSection(ScreenerFilter filter) {
     const markets = ['NSE', 'BSE', 'US'];
     return Column(
@@ -335,90 +250,224 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
   }
 
   Widget _buildSectorSection(ScreenerFilter filter) {
-    // Get sectors relevant to selected markets
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
+    final active = _sectorFilterEnabled;
+
     final availableStocks = StockUniverse.getAll().where(
       (s) => filter.markets.contains(s.market),
     );
     final sectors = availableStocks.map((s) => s.sector).toSet().toList()..sort();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionHeader('SECTOR (optional)'),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            GestureDetector(
-              onTap: () {
-                ref.read(screenerFilterProvider.notifier).updateSectors({});
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: filter.sectors.isEmpty
-                      ? AppColors.primary.withOpacity(0.15)
-                      : context.appColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: filter.sectors.isEmpty
-                        ? AppColors.primary
-                        : context.appColors.border,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: active ? c.card : c.surfaceVariant,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: active ? scheme.primary.withValues(alpha: 0.4) : c.border,
+          width: active ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: active
+                        ? scheme.primary.withValues(alpha: 0.15)
+                        : c.border.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.category_outlined,
+                    size: 18,
+                    color: active ? scheme.primary : c.textMuted,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sector filter',
+                        style: TextStyle(
+                          color: active ? c.textPrimary : c.textSecondary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        active
+                            ? filter.sectors.isEmpty
+                                ? 'Pick one or more sectors'
+                                : '${filter.sectors.length} sector${filter.sectors.length == 1 ? '' : 's'} selected'
+                            : 'Optional — narrow by sector',
+                        style: TextStyle(color: c.textMuted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: active,
+                  onChanged: (v) {
+                    setState(() {
+                      _sectorFilterEnabled = v;
+                      if (!v) {
+                        ref.read(screenerFilterProvider.notifier).updateSectors({});
+                      }
+                    });
+                  },
+                  activeColor: scheme.primary,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ],
+            ),
+          ),
+          if (active) ...[
+            Divider(height: 1, color: c.divider),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  ...filter.sectors.map((sector) {
+                    return GestureDetector(
+                      onTap: () {
+                        ref.read(screenerFilterProvider.notifier).toggleSector(sector);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.primary),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              sector,
+                              style: TextStyle(
+                                color: AppColors.primaryLight,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.close, size: 14, color: AppColors.primaryLight),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  GestureDetector(
+                    onTap: () => _showSectorPicker(filter, sectors),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: c.surfaceVariant,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: c.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 14, color: scheme.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Add sector',
+                            style: TextStyle(
+                              color: scheme.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showSectorPicker(ScreenerFilter filter, List<String> sectors) {
+    final c = context.appColors;
+    final scheme = Theme.of(context).colorScheme;
+    final unselected = sectors.where((s) => !filter.sectors.contains(s)).toList();
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                 child: Text(
-                  'All',
+                  'Select sector',
                   style: TextStyle(
-                    color: filter.sectors.isEmpty
-                        ? AppColors.primaryLight
-                        : context.appColors.textMuted,
-                    fontSize: 12,
-                    fontWeight: filter.sectors.isEmpty
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                    color: c.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-            ),
-            ...sectors.map((sector) {
-              final selected = filter.sectors.contains(sector);
-              return GestureDetector(
-                onTap: () {
-                  ref.read(screenerFilterProvider.notifier).toggleSector(sector);
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? AppColors.primary.withOpacity(0.15)
-                        : context.appColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: selected ? AppColors.primary : context.appColors.border,
-                    ),
-                  ),
+              if (unselected.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Text(
-                    sector,
-                    style: TextStyle(
-                      color: selected
-                          ? AppColors.primaryLight
-                          : context.appColors.textMuted,
-                      fontSize: 12,
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.w400,
-                    ),
+                    'All sectors for the selected market(s) are already added.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: c.textMuted, fontSize: 13),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: unselected.length,
+                    itemBuilder: (_, i) {
+                      final sector = unselected[i];
+                      return ListTile(
+                        title: Text(sector),
+                        trailing: Icon(Icons.add, color: scheme.primary),
+                        onTap: () {
+                          ref.read(screenerFilterProvider.notifier).toggleSector(sector);
+                          Navigator.pop(ctx);
+                        },
+                      );
+                    },
                   ),
                 ),
-              );
-            }),
-          ],
-        ),
-      ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1027,7 +1076,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
     return FilterSection(
       title: 'Supertrend',
       icon: Icons.trending_up,
-      description: 'ATR-based trend direction indicator',
+      description: 'ATR trend (default 10, 3 — matches Zerodha)',
       enabled: filter.useSupertrend,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleSupertrend(v),

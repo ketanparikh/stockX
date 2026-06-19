@@ -11,7 +11,8 @@ class AppConstants {
   static const int defaultMacdFastPeriod = 12;
   static const int defaultMacdSlowPeriod = 26;
   static const int defaultMacdSignalPeriod = 9;
-  static const int defaultSupertrendPeriod = 22;
+  // Zerodha / TradingView SuperTrend default is ATR 10, factor 3.
+  static const int defaultSupertrendPeriod = 10;
   static const double defaultSupertrendMultiplier = 3.0;
   static const int defaultChandelierPeriod = 22;
   static const double defaultChandelierMultiplier = 3.0;
