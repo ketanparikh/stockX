@@ -24,17 +24,28 @@ class WatchlistEntry {
   final String symbol;
   final DateTime addedAt;
   final List<SavedSignal> savedSignals;
+  /// Close price on the day the stock was added (for P&L since watchlist).
+  final double? addedPrice;
 
   const WatchlistEntry({
     required this.symbol,
     required this.addedAt,
     required this.savedSignals,
+    this.addedPrice,
   });
+
+  /// Profit % from [addedPrice] to [currentPrice], or null if unavailable.
+  double? profitPercent(double? currentPrice) {
+    final base = addedPrice;
+    if (base == null || base <= 0 || currentPrice == null) return null;
+    return (currentPrice - base) / base * 100;
+  }
 
   Map<String, dynamic> toJson() => {
         'symbol': symbol,
         'addedAt': addedAt.toIso8601String(),
         'signals': savedSignals.map((s) => s.toJson()).toList(),
+        if (addedPrice != null) 'addedPrice': addedPrice,
       };
 
   factory WatchlistEntry.fromJson(Map<String, dynamic> j) => WatchlistEntry(
@@ -43,6 +54,7 @@ class WatchlistEntry {
         savedSignals: (j['signals'] as List)
             .map((s) => SavedSignal.fromJson(s as Map<String, dynamic>))
             .toList(),
+        addedPrice: (j['addedPrice'] as num?)?.toDouble(),
       );
 }
 

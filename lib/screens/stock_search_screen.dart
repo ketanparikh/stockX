@@ -5,6 +5,7 @@ import '../models/screener_filter.dart';
 import '../models/screener_result.dart';
 import '../models/stock_search_analysis.dart';
 import '../providers/screener_provider.dart';
+import '../providers/watchlist_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/constants.dart';
 import '../utils/stock_symbols.dart';
@@ -323,6 +324,9 @@ class _StockSearchScreenState extends ConsumerState<StockSearchScreen> {
     StockSearchAnalysis analysis,
     ScreenerFilter filter,
   ) {
+    final scheme = Theme.of(context).colorScheme;
+    final isWatched = ref.watch(watchlistProvider).contains(quote.symbol);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -333,17 +337,54 @@ class _StockSearchScreenState extends ConsumerState<StockSearchScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            quote.symbol,
-            style: TextStyle(
-              color: c.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Text(
-            quote.name,
-            style: TextStyle(color: c.textSecondary, fontSize: 13),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      quote.symbol,
+                      style: TextStyle(
+                        color: c.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      quote.name,
+                      style: TextStyle(color: c.textSecondary, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  final wasWatched = isWatched;
+                  ref.read(watchlistEntriesProvider.notifier).toggle(
+                        quote.symbol,
+                        analysis.result.indicators,
+                        quote.price,
+                      );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        wasWatched
+                            ? '${quote.symbol} removed from watchlist'
+                            : '${quote.symbol} added to watchlist',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  isWatched ? Icons.bookmark : Icons.bookmark_outline,
+                  color: isWatched ? scheme.primary : c.textMuted,
+                ),
+                tooltip: isWatched ? 'Remove from watchlist' : 'Add to watchlist',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Row(

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/watchlist_entry.dart';
 import '../providers/alert_provider.dart';
+import '../providers/sync_provider.dart';
 import '../providers/watchlist_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/stock_symbols.dart';
+import '../utils/watchlist_price_utils.dart';
 
 class WatchlistScreen extends ConsumerStatefulWidget {
   const WatchlistScreen({super.key});
@@ -126,7 +128,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen> {
               style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           Text(
-            'Bookmark stocks from the screener results\nto track them here',
+            'Bookmark stocks from search, screener results,\nor stock detail to track them here',
             textAlign: TextAlign.center,
             style: TextStyle(color: c.textSecondary, fontSize: 14),
           ),
@@ -143,6 +145,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen> {
     ColorScheme scheme,
   ) {
     final symbols = entries.keys.toList();
+    final cache = ref.watch(cacheServiceProvider);
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 12),
       itemCount: symbols.length,
@@ -150,6 +153,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen> {
         final symbol = symbols[index];
         final entry = entries[symbol]!;
         final alerts = alertsBySymbol[symbol] ?? [];
+        final currentPrice = watchlistCurrentPrice(symbol, cache);
 
         StockSymbol? stock;
         try {
@@ -161,6 +165,7 @@ class _WatchlistScreenState extends ConsumerState<WatchlistScreen> {
           entry: entry,
           stock: stock,
           alerts: alerts,
+          currentPrice: currentPrice,
           onRemove: () {
             ref.read(watchlistEntriesProvider.notifier).remove(symbol);
             ref.read(alertProvider.notifier).dismissForSymbol(symbol);
@@ -179,6 +184,7 @@ class _WatchlistTile extends StatelessWidget {
   final WatchlistEntry entry;
   final StockSymbol? stock;
   final List<WatchlistAlert> alerts;
+  final double? currentPrice;
   final VoidCallback onRemove;
   final VoidCallback onDismissAlerts;
 
@@ -187,6 +193,7 @@ class _WatchlistTile extends StatelessWidget {
     required this.entry,
     required this.stock,
     required this.alerts,
+    required this.currentPrice,
     required this.onRemove,
     required this.onDismissAlerts,
   });
@@ -196,6 +203,12 @@ class _WatchlistTile extends StatelessWidget {
     final c = context.appColors;
     final scheme = Theme.of(context).colorScheme;
     final hasAlerts = alerts.isNotEmpty;
+    final profitPct = entry.profitPercent(currentPrice);
+    final profitColor = profitPct == null
+        ? c.textMuted
+        : profitPct >= 0
+            ? AppColors.bullish
+            : AppColors.bearish;
 
     return Column(
       children: [
@@ -258,9 +271,27 @@ class _WatchlistTile extends StatelessWidget {
                       if (stock?.name != null)
                         Text(stock!.name, style: TextStyle(color: c.textMuted, fontSize: 12)),
                       Text(
-                        'Added ${_formatDate(entry.addedAt)}',
+                        'Added ${_formatDate(entry.addedAt)}'
+                        '${entry.addedPrice != null ? ' @ ${_formatAddedPrice(entry.addedPrice!, stock?.market)}' : ''}',
                         style: TextStyle(color: c.textMuted, fontSize: 11),
                       ),
+                      if (profitPct != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${profitPct >= 0 ? '+' : ''}${profitPct.toStringAsFixed(2)}% since added',
+                          style: TextStyle(
+                            color: profitColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ] else if (entry.addedPrice != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Sync data to see profit %',
+                          style: TextStyle(color: c.textMuted, fontSize: 11),
+                        ),
+                      ],
                       if (entry.savedSignals.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Wrap(
@@ -273,6 +304,18 @@ class _WatchlistTile extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (profitPct != null)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Text(
+                            '${profitPct >= 0 ? '+' : ''}${profitPct.toStringAsFixed(1)}%',
+                            style: TextStyle(
+                              color: profitColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       if (stock != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -317,6 +360,13 @@ class _WatchlistTile extends StatelessWidget {
     if (diff.inDays == 1) return 'yesterday';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  String _formatAddedPrice(double price, String? market) {
+    if (market == 'NSE' || market == 'BSE') {
+      return '₹${price.toStringAsFixed(price >= 1000 ? 0 : 2)}';
+    }
+    return '\$${price.toStringAsFixed(2)}';
   }
 }
 

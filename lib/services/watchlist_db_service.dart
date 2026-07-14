@@ -37,10 +37,11 @@ class WatchlistDbService {
   /// Upsert a single entry (insert or update).
   Future<void> upsert(String userId, WatchlistEntry entry) async {
     await _client.from(_table).upsert({
-      'user_id':      userId,
-      'symbol':       entry.symbol,
-      'added_at':     entry.addedAt.toIso8601String(),
+      'user_id': userId,
+      'symbol': entry.symbol,
+      'added_at': entry.addedAt.toIso8601String(),
       'saved_signals': entry.savedSignals.map((s) => s.toJson()).toList(),
+      if (entry.addedPrice != null) 'added_price': entry.addedPrice,
     });
   }
 
@@ -59,9 +60,10 @@ class WatchlistDbService {
         .toList();
 
     return WatchlistEntry(
-      symbol:       row['symbol'] as String,
-      addedAt:      DateTime.parse(row['added_at'] as String),
+      symbol: row['symbol'] as String,
+      addedAt: DateTime.parse(row['added_at'] as String),
       savedSignals: signals,
+      addedPrice: (row['added_price'] as num?)?.toDouble(),
     );
   }
 }

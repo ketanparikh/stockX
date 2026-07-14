@@ -84,11 +84,16 @@ class WatchlistNotifier extends StateNotifier<Map<String, WatchlistEntry>> {
 
   // ── Public mutations ──────────────────────────────────────────────────────
 
-  void add(String symbol, List<IndicatorResult> indicators) {
+  void add(
+    String symbol,
+    List<IndicatorResult> indicators, {
+    double? addedPrice,
+  }) {
     final entry = WatchlistEntry(
-      symbol:       state[symbol]?.symbol ?? symbol,
-      addedAt:      state[symbol]?.addedAt ?? DateTime.now(),
+      symbol: symbol,
+      addedAt: DateTime.now(),
       savedSignals: indicators.map(SavedSignal.fromIndicator).toList(),
+      addedPrice: addedPrice,
     );
     state = {...state, symbol: entry};
 
@@ -107,8 +112,14 @@ class WatchlistNotifier extends StateNotifier<Map<String, WatchlistEntry>> {
     if (db != null && uid != null) db.delete(uid, symbol);
   }
 
-  void toggle(String symbol, [List<IndicatorResult> indicators = const []]) {
-    state.containsKey(symbol) ? remove(symbol) : add(symbol, indicators);
+  void toggle(
+    String symbol, [
+    List<IndicatorResult> indicators = const [],
+    double? addedPrice,
+  ]) {
+    state.containsKey(symbol)
+        ? remove(symbol)
+        : add(symbol, indicators, addedPrice: addedPrice);
   }
 
   bool isWatched(String symbol) => state.containsKey(symbol);

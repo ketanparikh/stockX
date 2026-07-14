@@ -58,3 +58,26 @@ CREATE POLICY "anon_full_access_screener_cache"
   FOR ALL
   USING (true)
   WITH CHECK (true);
+
+-- ── Per-user watchlist (synced across devices) ─────────────────────────────
+CREATE TABLE IF NOT EXISTS user_watchlist (
+  id            BIGSERIAL    PRIMARY KEY,
+  user_id       UUID         NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  symbol        TEXT         NOT NULL,
+  added_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  saved_signals JSONB        NOT NULL DEFAULT '[]',
+  added_price   FLOAT8,
+  UNIQUE (user_id, symbol)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_watchlist_user
+  ON user_watchlist (user_id);
+
+ALTER TABLE user_watchlist ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "users_own_watchlist" ON user_watchlist;
+CREATE POLICY "users_own_watchlist"
+  ON user_watchlist
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);

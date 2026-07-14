@@ -27,7 +27,7 @@ class StockDetailScreen extends ConsumerWidget {
           IconButton(
             onPressed: () => ref
                 .read(watchlistEntriesProvider.notifier)
-                .toggle(quote.symbol, result.indicators),
+                .toggle(quote.symbol, result.indicators, quote.price),
             icon: Icon(
               isWatched ? Icons.bookmark : Icons.bookmark_outline,
               color: isWatched ? scheme.primary : c.textSecondary,
