@@ -101,64 +101,64 @@ def wilder_atr_from_tr(tr: np.ndarray, period: int) -> np.ndarray:
 def chandelier_direction(high: np.ndarray, low: np.ndarray, close: np.ndarray) -> np.ndarray:
     """
     Returns +1 BUY / -1 SELL per bar (Chandelier Exit), NaN until first CE bar.
-    Matches chandelier_exit_indicator.dart loop.
+    Matches Screener/new_combined_strategy.py calculate_ce_signals().
     """
     n = len(close)
-    p = CE_PERIOD
-    tr = np.maximum(
+    p = CE_PERIOD if n >= 100 else 14
+
+    tr = np.zeros(n)
+    tr[0] = high[0] - low[0]
+    tr[1:] = np.maximum(
         high[1:] - low[1:],
         np.maximum(
             np.abs(high[1:] - close[:-1]),
             np.abs(low[1:] - close[:-1]),
         ),
     )
-    atr_list = wilder_atr_from_tr(tr, p)
-    m = len(atr_list)
-    if m == 0:
-        return np.full(n, np.nan)
 
-    raw_long = np.zeros(m)
-    raw_short = np.zeros(m)
-    for k in range(m):
-        bar_idx = p + k
-        win_start = max(0, bar_idx - p + 1)
-        window_high = high[win_start : bar_idx + 1]
-        window_low = low[win_start : bar_idx + 1]
-        hh = window_high.max()
-        ll = window_low.min()
-        raw_long[k] = hh - CE_MULTIPLIER * atr_list[k]
-        raw_short[k] = ll + CE_MULTIPLIER * atr_list[k]
+    atr = np.full(n, np.nan)
+    atr[p - 1] = tr[:p].mean()
+    for i in range(p, n):
+        atr[i] = atr[i - 1] + (tr[i] - atr[i - 1]) / p
 
-    trail_long = np.zeros(m)
-    trail_short = np.zeros(m)
-    dir_list = np.ones(m, dtype=np.int8)
+    highest_close = pd.Series(close).rolling(window=p).max().values
+    lowest_close = pd.Series(close).rolling(window=p).min().values
+    raw_long = highest_close - CE_MULTIPLIER * atr
+    raw_short = lowest_close + CE_MULTIPLIER * atr
+
+    trail_long = np.full(n, np.nan)
+    trail_short = np.full(n, np.nan)
+    dir_out = np.full(n, np.nan)
+    dir_list = [1]
 
     trail_long[0] = raw_long[0]
     trail_short[0] = raw_short[0]
+    dir_out[0] = 1.0
 
-    for k in range(1, m):
-        prev_close = close[p + k - 1]
-        if prev_close > trail_long[k - 1]:
-            trail_long[k] = max(raw_long[k], trail_long[k - 1])
+    for i in range(1, n):
+        prev_close = close[i - 1]
+        if not np.isnan(trail_long[i - 1]) and not np.isnan(raw_long[i]):
+            trail_long[i] = max(raw_long[i], trail_long[i - 1]) if prev_close > trail_long[i - 1] else raw_long[i]
         else:
-            trail_long[k] = raw_long[k]
-        if prev_close < trail_short[k - 1]:
-            trail_short[k] = min(raw_short[k], trail_short[k - 1])
-        else:
-            trail_short[k] = raw_short[k]
+            trail_long[i] = raw_long[i] if not np.isnan(raw_long[i]) else trail_long[i - 1]
 
-        c = close[p + k]
-        if c > trail_short[k - 1]:
-            dir_list[k] = 1
-        elif c < trail_long[k - 1]:
-            dir_list[k] = -1
+        if not np.isnan(trail_short[i - 1]) and not np.isnan(raw_short[i]):
+            trail_short[i] = min(raw_short[i], trail_short[i - 1]) if prev_close < trail_short[i - 1] else raw_short[i]
         else:
-            dir_list[k] = dir_list[k - 1]
+            trail_short[i] = raw_short[i] if not np.isnan(raw_short[i]) else trail_short[i - 1]
 
-    out = np.full(n, np.nan)
-    for k in range(m):
-        out[p + k] = float(dir_list[k])
-    return out
+        c = close[i]
+        prev_short = trail_short[i - 1]
+        prev_long = trail_long[i - 1]
+        if not np.isnan(prev_short) and c > prev_short:
+            dir_list.append(1)
+        elif not np.isnan(prev_long) and c < prev_long:
+            dir_list.append(-1)
+        else:
+            dir_list.append(dir_list[-1])
+        dir_out[i] = float(dir_list[-1])
+
+    return dir_out
 
 
 def bull_cross(rf: np.ndarray, rs: np.ndarray, i: int) -> bool:

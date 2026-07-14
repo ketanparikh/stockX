@@ -9,6 +9,7 @@ import 'providers/watchlist_provider.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/results_screen.dart';
+import 'screens/stock_search_screen.dart';
 import 'screens/stock_detail_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -31,6 +32,10 @@ final _router = GoRouter(
               },
             ),
           ],
+        ),
+        GoRoute(
+          path: 'search',
+          builder: (context, state) => const StockSearchScreen(),
         ),
         GoRoute(
           path: 'detail',

@@ -27,6 +27,11 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       appBar: AppBar(
         title: Text('Stock Screener'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: 'Search stock',
+            onPressed: () => context.push('/search'),
+          ),
           TextButton.icon(
             onPressed: () {
               ref.read(screenerFilterProvider.notifier).reset();
@@ -1119,7 +1124,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
     return FilterSection(
       title: 'Chandelier Exit',
       icon: Icons.candlestick_chart,
-      description: 'Volatility-based stop-loss system',
+      description: 'Close-based CE (22/3, matches Screener)',
       enabled: filter.useChandelier,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleChandelier(v),

@@ -418,4 +418,42 @@ class StockUniverse {
 
   /// Total number of NSE symbols in the universe.
   static int get nseCount => nse.length;
+
+  /// Search by symbol or company name (case-insensitive).
+  static List<StockSymbol> search(String query, {int limit = 30}) {
+    final q = query.trim().toUpperCase();
+    if (q.isEmpty) return const [];
+
+    final matches = <StockSymbol>[];
+    for (final stock in getAll()) {
+      if (stock.symbol.toUpperCase().contains(q) ||
+          stock.name.toUpperCase().contains(q)) {
+        matches.add(stock);
+        if (matches.length >= limit) break;
+      }
+    }
+
+    matches.sort((a, b) {
+      final aExact = a.symbol.toUpperCase() == q;
+      final bExact = b.symbol.toUpperCase() == q;
+      if (aExact != bExact) return aExact ? -1 : 1;
+      final aStarts = a.symbol.toUpperCase().startsWith(q);
+      final bStarts = b.symbol.toUpperCase().startsWith(q);
+      if (aStarts != bStarts) return aStarts ? -1 : 1;
+      return a.symbol.compareTo(b.symbol);
+    });
+
+    return matches;
+  }
+
+  /// Resolve a typed symbol to a universe entry, or null if unknown.
+  static StockSymbol? resolve(String query) {
+    final q = query.trim().toUpperCase();
+    if (q.isEmpty) return null;
+    for (final stock in getAll()) {
+      if (stock.symbol.toUpperCase() == q) return stock;
+    }
+    final results = search(q, limit: 1);
+    return results.isEmpty ? null : results.first;
+  }
 }

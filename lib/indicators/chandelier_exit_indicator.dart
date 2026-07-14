@@ -1,116 +1,143 @@
 import 'dart:math' as math;
+
 import '../models/candle_data.dart';
 import '../models/indicator_result.dart';
 import '../models/screener_filter.dart';
 import 'indicator_utils.dart';
 
-/// Chandelier Exit — TradingView-accurate implementation.
+/// Chandelier Exit — matches `calculate_ce_signals()` in Screener/new_combined_strategy.py.
 ///
-/// Key behaviours matching new_combined_strategy.py:
-///   • ATR  : Wilder's smoothing (RMA) — same as Pine Script ta.atr / pine_rma
-///   • Stops: highest HIGH / lowest LOW over the ATR period (TradingView default)
-///   • Trailing: stops only ratchet in the profitable direction:
-///       - long stop  rises if prev close > prev long stop
-///       - short stop falls if prev close < prev short stop
-///   • Direction: BUY when close > prev short stop,
-///                SELL when close < prev long stop,
-///                else continue previous direction
+///   • ATR: Pine RMA on true range (same index as each candle)
+///   • Stops: rolling max/min of **close** over the ATR period (not high/low)
+///   • Trailing: long stop ratchets up, short stop ratchets down
+///   • Direction: BUY when close > prev short stop; SELL when close < prev long stop
+///   • Period: 14 when fewer than 100 bars, else filter period (default 22)
 class ChandelierExitIndicator {
   static const int _kHistoryLen = 50;
+  static const int _kShortDataPeriod = 14;
+  static const int _kMinBarsForDefaultPeriod = 100;
 
   static ChandelierResult? calculate(
     List<CandleData> candles,
     ChandelierFilterParams params,
   ) {
-    final period     = params.period;
+    final n = candles.length;
+    final period = n < _kMinBarsForDefaultPeriod
+        ? _kShortDataPeriod
+        : params.period;
     final multiplier = params.multiplier;
 
-    if (candles.length < period + 2) return null;
+    if (n < period + 2) return null;
 
-    // ── Step 1: Wilder-smoothed ATR (matches Pine Script ta.atr / python pine_rma)
-    // atrList[k] corresponds to candles[period + k]
-    final atrList = IndicatorUtils.atr(candles, period);
-    if (atrList.isEmpty) return null;
+    final tr = IndicatorUtils.trueRangeFull(candles);
+    final atr = IndicatorUtils.pineRmaSeries(tr, period);
 
-    final n = atrList.length; // number of bars with a valid ATR value
+    final rawLongStop = List<double?>.filled(n, null);
+    final rawShortStop = List<double?>.filled(n, null);
 
-    // ── Step 2: Raw (untrailed) stop levels per bar using highest HIGH / lowest LOW
-    final rawLongStop  = List<double>.filled(n, 0);
-    final rawShortStop = List<double>.filled(n, 0);
+    for (var i = period - 1; i < n; i++) {
+      final atrValue = atr[i];
+      if (atrValue == null) continue;
 
-    for (int k = 0; k < n; k++) {
-      final barIdx  = period + k;
-      final winStart = (barIdx - period + 1).clamp(0, candles.length - 1);
-      final window   = candles.sublist(winStart, barIdx + 1);
-      final hh = window.map((c) => c.high).reduce((a, b) => a > b ? a : b);
-      final ll = window.map((c) => c.low ).reduce((a, b) => a < b ? a : b);
-      rawLongStop[k]  = hh - multiplier * atrList[k];
-      rawShortStop[k] = ll + multiplier * atrList[k];
+      final windowStart = i - period + 1;
+      var highestClose = candles[windowStart].close;
+      var lowestClose = candles[windowStart].close;
+      for (var j = windowStart + 1; j <= i; j++) {
+        highestClose = math.max(highestClose, candles[j].close);
+        lowestClose = math.min(lowestClose, candles[j].close);
+      }
+
+      rawLongStop[i] = highestClose - multiplier * atrValue;
+      rawShortStop[i] = lowestClose + multiplier * atrValue;
     }
 
-    // ── Step 3: Trailing stop state + direction tracking
-    // Mirrors the bar-by-bar loop in calculate_ce_signals() from Python:
-    //   • long  stop trails upward   (ratchets up,  never down)
-    //   • short stop trails downward (ratchets down, never up)
-    //   • direction flips on confirmed breakout of the opposite stop
-    final trailLong  = List<double>.filled(n, 0);
-    final trailShort = List<double>.filled(n, 0);
-    final dirList    = List<int>.filled(n, 1); // 1 = BUY, -1 = SELL
+    final trailLong = List<double?>.filled(n, null);
+    final trailShort = List<double?>.filled(n, null);
+    final dirList = <int>[1]; // uptrend default — matches Screener
 
-    trailLong[0]  = rawLongStop[0];
+    trailLong[0] = rawLongStop[0];
     trailShort[0] = rawShortStop[0];
 
-    for (int k = 1; k < n; k++) {
-      final prevClose = candles[period + k - 1].close;
+    for (var i = 1; i < n; i++) {
+      final prevClose = candles[i - 1].close;
+      final prevLong = trailLong[i - 1];
+      final prevShort = trailShort[i - 1];
+      final rawLong = rawLongStop[i];
+      final rawShort = rawShortStop[i];
 
-      // Long stop: only ratchets up when previous close is above it
-      trailLong[k] = prevClose > trailLong[k - 1]
-          ? math.max(rawLongStop[k], trailLong[k - 1])
-          : rawLongStop[k];
-
-      // Short stop: only ratchets down when previous close is below it
-      trailShort[k] = prevClose < trailShort[k - 1]
-          ? math.min(rawShortStop[k], trailShort[k - 1])
-          : rawShortStop[k];
-
-      // Direction: compare current close to PREVIOUS bar's trailing stop
-      final close = candles[period + k].close;
-      if (close > trailShort[k - 1]) {
-        dirList[k] = 1;           // confirmed breakout above → BUY
-      } else if (close < trailLong[k - 1]) {
-        dirList[k] = -1;          // confirmed breakdown below → SELL
+      if (prevLong != null && rawLong != null) {
+        trailLong[i] = prevClose > prevLong
+            ? math.max(rawLong, prevLong)
+            : rawLong;
       } else {
-        dirList[k] = dirList[k - 1]; // no breakout → continue previous direction
+        trailLong[i] = rawLong ?? prevLong;
+      }
+
+      if (prevShort != null && rawShort != null) {
+        trailShort[i] = prevClose < prevShort
+            ? math.min(rawShort, prevShort)
+            : rawShort;
+      } else {
+        trailShort[i] = rawShort ?? prevShort;
+      }
+
+      final close = candles[i].close;
+      final prevDir = dirList.last;
+      final priorShort = trailShort[i - 1];
+      final priorLong = trailLong[i - 1];
+
+      if (priorShort != null && close > priorShort) {
+        dirList.add(1);
+      } else if (priorLong != null && close < priorLong) {
+        dirList.add(-1);
+      } else {
+        dirList.add(prevDir);
       }
     }
 
-    // ── Step 4: Build signal history for signalAge calculation
-    final histStart = n > _kHistoryLen ? n - _kHistoryLen : 0;
+    final histStart =
+        dirList.length > _kHistoryLen ? dirList.length - _kHistoryLen : 0;
     final signalHistory = dirList.sublist(histStart).map((d) {
-      if (d == 1)  return SignalType.buy;
+      if (d == 1) return SignalType.buy;
       if (d == -1) return SignalType.sell;
       return SignalType.neutral;
     }).toList();
 
     if (signalHistory.isEmpty) return null;
 
-    final currentSignal = signalHistory.last;
-    final age = IndicatorUtils.signalAge(signalHistory);
+    final currentDir = dirList.last;
+    final currentSignal = currentDir == 1
+        ? SignalType.buy
+        : currentDir == -1
+            ? SignalType.sell
+            : SignalType.neutral;
+
+    final age = IndicatorUtils.signalAge(
+      signalHistory,
+      maxLookback: signalHistory.length,
+    );
 
     return ChandelierResult(
-      longStop:  trailLong.last,
-      shortStop: trailShort.last,
-      signal:    currentSignal,
+      longStop: trailLong.last ?? 0,
+      shortStop: trailShort.last ?? 0,
+      signal: currentSignal,
       signalAge: age,
     );
   }
 
-  static bool matchesFilter(ChandelierResult result, ChandelierFilterParams params) {
+  static bool matchesFilter(
+    ChandelierResult result,
+    ChandelierFilterParams params,
+  ) {
     switch (params.signal) {
-      case 'BUY':     return result.signal == SignalType.buy;
-      case 'SELL':    return result.signal == SignalType.sell;
-      case 'NEUTRAL': return result.signal == SignalType.neutral;
-      default:        return true;
+      case 'BUY':
+        return result.signal == SignalType.buy;
+      case 'SELL':
+        return result.signal == SignalType.sell;
+      case 'NEUTRAL':
+        return result.signal == SignalType.neutral;
+      default:
+        return true;
     }
   }
 }

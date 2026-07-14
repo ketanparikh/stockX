@@ -6,6 +6,7 @@ import '../indicators/ema_indicator.dart';
 import '../indicators/macd_indicator.dart';
 import '../indicators/rsi_indicator.dart';
 import '../indicators/supertrend_indicator.dart';
+import '../models/stock_search_analysis.dart';
 import '../models/candle_data.dart';
 import '../models/indicator_result.dart';
 import '../models/screener_filter.dart';
@@ -336,6 +337,122 @@ class ScreenerService {
     }
 
     return true;
+  }
+
+  /// Analyze one stock against [filter] (same logic as a screener run).
+  Future<ScreenerResult?> analyzeStock(
+    StockSymbol stock,
+    ScreenerFilter filter,
+  ) =>
+      _processStock(stock, filter);
+
+  /// Whether [result] would be included in screener results for [filter].
+  bool passesScreenerFilter(ScreenerResult result, ScreenerFilter filter) =>
+      _passesFilter(result, filter);
+
+  List<IndicatorFilterStatus> buildFilterStatuses(
+    ScreenerResult result,
+    ScreenerFilter filter,
+  ) {
+    return result.indicators.map((indicator) {
+      final enabled = _isIndicatorEnabled(indicator.name, filter);
+      return IndicatorFilterStatus(
+        indicator: indicator,
+        criteriaLabel: _criteriaLabel(indicator.name, filter),
+        isFilterEnabled: enabled,
+        matchesFilter: enabled && _indicatorMatchesFilter(indicator, filter),
+      );
+    }).toList();
+  }
+
+  Future<StockSearchAnalysis?> analyzeStockSearch(
+    StockSymbol stock,
+    ScreenerFilter filter,
+  ) async {
+    ScreenerResult? result = await analyzeStock(stock, filter);
+
+    if (result == null) return null;
+
+    if (!filter.hasAnyFilter) {
+      final allIndicators = await computeAllIndicators(result.candles);
+      result = ScreenerResult(
+        quote: result.quote,
+        candles: result.candles,
+        indicators: allIndicators,
+        matchingFilters: 0,
+        totalFilters: 0,
+      );
+      final statuses = allIndicators
+          .map(
+            (indicator) => IndicatorFilterStatus(
+              indicator: indicator,
+              criteriaLabel: 'Signal only (no filter enabled)',
+              isFilterEnabled: false,
+              matchesFilter: false,
+            ),
+          )
+          .toList();
+      return StockSearchAnalysis(
+        result: result,
+        statuses: statuses,
+        passesScreener: false,
+        hasActiveFilters: false,
+      );
+    }
+
+    final statuses = buildFilterStatuses(result, filter);
+    return StockSearchAnalysis(
+      result: result,
+      statuses: statuses,
+      passesScreener: passesScreenerFilter(result, filter),
+      hasActiveFilters: true,
+    );
+  }
+
+  bool _isIndicatorEnabled(String name, ScreenerFilter filter) {
+    switch (name) {
+      case 'RSI':
+        return filter.useRsi;
+      case 'Supertrend':
+        return filter.useSupertrend;
+      case 'Chandelier Exit':
+        return filter.useChandelier;
+      case 'MACD':
+        return filter.useMacd;
+      case 'Bollinger Bands':
+        return filter.useBollinger;
+      case 'ADX':
+        return filter.useAdx;
+      case 'Sethi':
+        return filter.useSethi;
+      default:
+        if (name.startsWith('EMA')) return filter.useEma;
+        return false;
+    }
+  }
+
+  String _criteriaLabel(String name, ScreenerFilter filter) {
+    switch (name) {
+      case 'RSI':
+        return 'RSI — ${filter.rsiParams.signal}';
+      case 'Supertrend':
+        return 'Supertrend — ${filter.supertrendParams.signal}';
+      case 'Chandelier Exit':
+        return 'Chandelier Exit — ${filter.chandelierParams.signal}';
+      case 'MACD':
+        return 'MACD — ${filter.macdParams.signal}';
+      case 'Bollinger Bands':
+        return 'Bollinger — ${filter.bollingerParams.signal}';
+      case 'ADX':
+        return 'ADX — ${filter.adxParams.signal}';
+      case 'Sethi':
+        return 'Sethi — ${filter.sethiParams.signal}';
+      default:
+        if (name.startsWith('EMA')) {
+          return 'EMA — ${filter.emaParams.signal}';
+        }
+        return name;
+    }
   }
 
   // Compute all indicators for a single stock (for detail view)

@@ -88,6 +88,43 @@ class IndicatorUtils {
     return sma(tr, period);
   }
 
+  /// Pine Script RMA (Wilder's smoothing) on a full-length series.
+  /// First value is at index [period - 1]; earlier indices are null.
+  static List<double?> pineRmaSeries(List<double> values, int period) {
+    final n = values.length;
+    final rma = List<double?>.filled(n, null);
+    if (n < period) return rma;
+
+    var sum = 0.0;
+    for (var i = 0; i < period; i++) {
+      sum += values[i];
+    }
+    rma[period - 1] = sum / period;
+
+    for (var i = period; i < n; i++) {
+      final prev = rma[i - 1]!;
+      rma[i] = prev + (values[i] - prev) / period;
+    }
+    return rma;
+  }
+
+  /// True Range aligned to each candle (index 0 uses high-low only).
+  static List<double> trueRangeFull(List<CandleData> candles) {
+    final tr = List<double>.filled(candles.length, 0);
+    if (candles.isEmpty) return tr;
+    tr[0] = candles[0].high - candles[0].low;
+    for (var i = 1; i < candles.length; i++) {
+      final high = candles[i].high;
+      final low = candles[i].low;
+      final prevClose = candles[i - 1].close;
+      tr[i] = math.max(
+        high - low,
+        math.max((high - prevClose).abs(), (low - prevClose).abs()),
+      );
+    }
+    return tr;
+  }
+
   /// Counts how many consecutive bars (starting from the last) share the
   /// same signal state, then subtracts 1 to get the "age".
   ///
