@@ -23,12 +23,16 @@ class StockSearchAnalysis {
     required this.statuses,
     required this.passesScreener,
     required this.hasActiveFilters,
+    this.qualityPasses,
+    this.qualityCriteriaLabel,
   });
 
   final ScreenerResult result;
   final List<IndicatorFilterStatus> statuses;
   final bool passesScreener;
   final bool hasActiveFilters;
+  final bool? qualityPasses;
+  final String? qualityCriteriaLabel;
 
   int get matchingCount =>
       statuses.where((s) => s.isFilterEnabled && s.matchesFilter).length;

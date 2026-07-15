@@ -66,6 +66,12 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 ),
               ),
               SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _buildQualityFilterSection(filter),
+                ),
+              ),
+              SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 sliver: SliverToBoxAdapter(
                   child: _buildFilterMatchMode(filter),
@@ -412,6 +418,57 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQualityFilterSection(ScreenerFilter filter) {
+    return FilterSection(
+      title: 'Stock Quality',
+      icon: Icons.filter_alt_outlined,
+      description:
+          'Mcap > 15,000 Cr · volume surge · close above 20 & 50 EMA (NSE/BSE)',
+      enabled: filter.useQualityFilter,
+      onToggle: (v) =>
+          ref.read(screenerFilterProvider.notifier).toggleQualityFilter(v),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Applied before technical indicators. Uses Yahoo market cap for Indian listings.',
+            style: TextStyle(
+              color: context.appColors.textMuted,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 10),
+          LabeledSlider(
+            label: 'Min market cap (₹ Cr)',
+            value: filter.qualityParams.minMarketCapCrore,
+            min: 5000,
+            max: 50000,
+            divisions: 18,
+            formatter: (v) => '${v.toStringAsFixed(0)} Cr',
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateQualityParams(
+                  filter.qualityParams.copyWith(minMarketCapCrore: v),
+                ),
+          ),
+          LabeledSlider(
+            label: 'Volume vs 20D average',
+            value: filter.qualityParams.volumeMultiplier,
+            min: 1.5,
+            max: 2.0,
+            divisions: 1,
+            formatter: (v) => '${v.toStringAsFixed(1)}×',
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateQualityParams(
+                  filter.qualityParams.copyWith(volumeMultiplier: v),
+                ),
+          ),
         ],
       ),
     );

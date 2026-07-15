@@ -34,6 +34,9 @@ class AppConstants {
   static const double defaultSethiMinPrice = 50.0;
   static const double defaultSethiMinAvgValue = 10000000.0; // INR 1 crore
 
+  static const double defaultMinMarketCapCrore = 15000.0;
+  static const double defaultQualityVolumeMultiplier = 1.5;
+
   static const int maxCandlesForIndicators = 300;
 
   /// Supabase `screener_filter_cache` rows older than this are ignored; a new

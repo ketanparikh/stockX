@@ -327,6 +327,47 @@ class SethiFilterParams {
       );
 }
 
+/// Size, liquidity, and price-vs-EMA gates (no UI display of raw mcap/volume).
+class QualityFilterParams {
+  /// Minimum market cap in INR crore (NSE/BSE only). 0 = skip mcap check.
+  final double minMarketCapCrore;
+  final int volumeLookback;
+  final double volumeMultiplier;
+  final int ema20Period;
+  final int ema50Period;
+  final bool requireAboveEma20;
+  final bool requireAboveEma50;
+
+  const QualityFilterParams({
+    this.minMarketCapCrore = AppConstants.defaultMinMarketCapCrore,
+    this.volumeLookback = AppConstants.defaultSethiVolumeLookback,
+    this.volumeMultiplier = AppConstants.defaultQualityVolumeMultiplier,
+    this.ema20Period = 20,
+    this.ema50Period = 50,
+    this.requireAboveEma20 = true,
+    this.requireAboveEma50 = true,
+  });
+
+  QualityFilterParams copyWith({
+    double? minMarketCapCrore,
+    int? volumeLookback,
+    double? volumeMultiplier,
+    int? ema20Period,
+    int? ema50Period,
+    bool? requireAboveEma20,
+    bool? requireAboveEma50,
+  }) =>
+      QualityFilterParams(
+        minMarketCapCrore: minMarketCapCrore ?? this.minMarketCapCrore,
+        volumeLookback: volumeLookback ?? this.volumeLookback,
+        volumeMultiplier: volumeMultiplier ?? this.volumeMultiplier,
+        ema20Period: ema20Period ?? this.ema20Period,
+        ema50Period: ema50Period ?? this.ema50Period,
+        requireAboveEma20: requireAboveEma20 ?? this.requireAboveEma20,
+        requireAboveEma50: requireAboveEma50 ?? this.requireAboveEma50,
+      );
+}
+
 class ScreenerFilter {
   final Set<String> markets;
   final Set<String> sectors;
@@ -347,6 +388,8 @@ class ScreenerFilter {
   final AdxFilterParams adxParams;
   final bool useSethi;
   final SethiFilterParams sethiParams;
+  final bool useQualityFilter;
+  final QualityFilterParams qualityParams;
   final bool requireAllFilters;
 
   /// When true, only include stocks where ALL matching indicators
@@ -380,6 +423,8 @@ class ScreenerFilter {
     this.adxParams = const AdxFilterParams(),
     this.useSethi = false,
     this.sethiParams = const SethiFilterParams(),
+    this.useQualityFilter = false,
+    this.qualityParams = const QualityFilterParams(),
     this.requireAllFilters = true,
     this.requireFreshSignal = false,
     this.freshSignalMaxBars = 3,
@@ -387,6 +432,17 @@ class ScreenerFilter {
   });
 
   bool get hasAnyFilter =>
+      useQualityFilter ||
+      useRsi ||
+      useSupertrend ||
+      useChandelier ||
+      useMacd ||
+      useEma ||
+      useBollinger ||
+      useAdx ||
+      useSethi;
+
+  bool get hasIndicatorFilters =>
       useRsi ||
       useSupertrend ||
       useChandelier ||
@@ -398,6 +454,7 @@ class ScreenerFilter {
 
   int get activeFilterCount {
     int count = 0;
+    if (useQualityFilter) count++;
     if (useRsi) count++;
     if (useSupertrend) count++;
     if (useChandelier) count++;
@@ -429,6 +486,8 @@ class ScreenerFilter {
     AdxFilterParams? adxParams,
     bool? useSethi,
     SethiFilterParams? sethiParams,
+    bool? useQualityFilter,
+    QualityFilterParams? qualityParams,
     bool? requireAllFilters,
     bool? requireFreshSignal,
     int? freshSignalMaxBars,
@@ -454,6 +513,8 @@ class ScreenerFilter {
         adxParams: adxParams ?? this.adxParams,
         useSethi: useSethi ?? this.useSethi,
         sethiParams: sethiParams ?? this.sethiParams,
+        useQualityFilter: useQualityFilter ?? this.useQualityFilter,
+        qualityParams: qualityParams ?? this.qualityParams,
         requireAllFilters: requireAllFilters ?? this.requireAllFilters,
         requireFreshSignal: requireFreshSignal ?? this.requireFreshSignal,
         freshSignalMaxBars: freshSignalMaxBars ?? this.freshSignalMaxBars,

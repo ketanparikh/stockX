@@ -252,6 +252,10 @@ class _StockSearchScreenState extends ConsumerState<StockSearchScreen> {
       children: [
         _buildQuoteCard(c, quote, isPositive, analysis, filter),
         const SizedBox(height: 16),
+        if (analysis.qualityCriteriaLabel != null) ...[
+          _buildQualityBanner(c, analysis),
+          const SizedBox(height: 16),
+        ],
         if (analysis.hasActiveFilters) ...[
           _buildVerdictBanner(c, analysis, filter),
           const SizedBox(height: 16),
@@ -412,6 +416,50 @@ class _StockSearchScreenState extends ConsumerState<StockSearchScreen> {
           Text(
             '${quote.market} · ${Timeframe.label(filter.timeframe)}',
             style: TextStyle(color: c.textMuted, fontSize: 11),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQualityBanner(AppSurfaces c, StockSearchAnalysis analysis) {
+    final pass = analysis.qualityPasses ?? false;
+    final color = pass ? AppColors.bullish : AppColors.bearish;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            pass ? Icons.check_circle_outline : Icons.cancel_outlined,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  pass ? 'Passes quality filter' : 'Fails quality filter',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                if (analysis.qualityCriteriaLabel != null)
+                  Text(
+                    analysis.qualityCriteriaLabel!,
+                    style: TextStyle(color: c.textSecondary, fontSize: 11),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

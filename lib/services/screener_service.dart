@@ -1,3 +1,4 @@
+import '../filters/stock_quality_filter.dart';
 import '../indicators/adx_indicator.dart';
 import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
@@ -18,13 +19,20 @@ import '../utils/stock_symbols.dart';
 import 'cache_service.dart';
 import 'data_sync_service.dart';
 import 'supabase_service.dart';
+import 'yahoo_finance_service.dart';
 
 class ScreenerService {
   final CacheService _cache;
   final DataSyncService _syncService;
   final SupabaseService _supabase;
+  final YahooFinanceService _yahoo;
 
-  ScreenerService(this._cache, this._syncService, this._supabase);
+  ScreenerService(
+    this._cache,
+    this._syncService,
+    this._supabase,
+    this._yahoo,
+  );
 
   Future<List<ScreenerResult>> runScreener(
     ScreenerFilter filter, {
@@ -92,12 +100,17 @@ class ScreenerService {
     final results = <ScreenerResult>[];
     int processed = 0;
 
+    final marketCaps = filter.useQualityFilter &&
+            filter.qualityParams.minMarketCapCrore > 0
+        ? await _loadMarketCaps(stocksToScreen)
+        : const <String, double>{};
+
     for (int i = 0; i < stocksToScreen.length; i += batchSize) {
       final end = (i + batchSize).clamp(0, stocksToScreen.length);
       final batch = stocksToScreen.sublist(i, end);
 
       final batchResults = await Future.wait(
-        batch.map((stock) => _processStock(stock, filter)),
+        batch.map((stock) => _processStock(stock, filter, marketCaps)),
       );
 
       for (final result in batchResults) {
@@ -165,10 +178,35 @@ class ScreenerService {
     return ok / stocks.length;
   }
 
+  Future<Map<String, double>> _loadMarketCaps(List<StockSymbol> stocks) async {
+    final indian =
+        stocks.where((s) => s.market == 'NSE' || s.market == 'BSE').toList();
+    final caps = <String, double>{};
+    const chunkSize = 40;
+
+    for (var i = 0; i < indian.length; i += chunkSize) {
+      final end = (i + chunkSize).clamp(0, indian.length);
+      final chunk = indian.sublist(i, end);
+      try {
+        final quotes = await _yahoo.fetchBatchQuotes(chunk);
+        for (final entry in quotes.entries) {
+          final cap = entry.value.marketCap;
+          if (cap != null && cap > 0) caps[entry.key] = cap;
+        }
+      } catch (_) {}
+      if (end < indian.length) {
+        await Future.delayed(const Duration(milliseconds: 150));
+      }
+    }
+    return caps;
+  }
+
   Future<ScreenerResult?> _processStock(
     StockSymbol stock,
     ScreenerFilter filter,
-  ) async {
+    Map<String, double> marketCaps, {
+    bool applyQualityGate = true,
+  }) async {
     try {
       // Cache-first: skip the network call if we already have candle data.
       List<CandleData> candles =
@@ -182,6 +220,16 @@ class ScreenerService {
       }
 
       if (candles.length < 2) return null;
+
+      if (filter.useQualityFilter && applyQualityGate) {
+        final ok = StockQualityFilter.passes(
+          candles,
+          filter.qualityParams,
+          marketCapInr: marketCaps[stock.symbol],
+          market: stock.market,
+        );
+        if (!ok) return null;
+      }
 
       // Derive the quote from candle data — avoids a second API call
       // and the rate-limit / CORS failures that killed results silently.
@@ -200,8 +248,8 @@ class ScreenerService {
       }
 
       // A stock is only included if at least one indicator was successfully
-      // computed (prevents "0 of 0 match" artefacts).
-      if (totalFilters == 0 && filter.hasAnyFilter) return null;
+      // computed (prevents "0 of 0 match" artefacts), unless quality-only run.
+      if (totalFilters == 0 && filter.hasIndicatorFilters) return null;
 
       return ScreenerResult(
         quote: quote,
@@ -320,31 +368,72 @@ class ScreenerService {
   bool _passesFilter(ScreenerResult result, ScreenerFilter filter) {
     if (!filter.hasAnyFilter) return true;
 
-    final signalOk = filter.requireAllFilters
-        ? result.totalFilters > 0 && result.matchingFilters == result.totalFilters
-        : result.matchingFilters > 0;
+    if (filter.hasIndicatorFilters) {
+      final signalOk = filter.requireAllFilters
+          ? result.totalFilters > 0 &&
+              result.matchingFilters == result.totalFilters
+          : result.matchingFilters > 0;
 
-    if (!signalOk) return false;
+      if (!signalOk) return false;
 
-    // Fresh-signal gate: every MATCHING indicator must have fired within
-    // the configured look-back window.
-    if (filter.requireFreshSignal) {
-      final matchingIndicators = result.indicators
-          .where((ind) => _indicatorMatchesFilter(ind, filter));
-      final allFresh = matchingIndicators
-          .every((ind) => ind.isFresh(filter.freshSignalMaxBars));
-      if (!allFresh) return false;
+      if (filter.requireFreshSignal) {
+        final matchingIndicators = result.indicators
+            .where((ind) => _indicatorMatchesFilter(ind, filter));
+        final allFresh = matchingIndicators
+            .every((ind) => ind.isFresh(filter.freshSignalMaxBars));
+        if (!allFresh) return false;
+      }
     }
 
     return true;
   }
 
+  bool passesQualityFilter(
+    List<CandleData> candles,
+    StockSymbol stock,
+    ScreenerFilter filter, {
+    Map<String, double>? marketCaps,
+  }) {
+    if (!filter.useQualityFilter) return true;
+    return StockQualityFilter.passes(
+      candles,
+      filter.qualityParams,
+      marketCapInr: marketCaps?[stock.symbol],
+      market: stock.market,
+    );
+  }
+
   /// Analyze one stock against [filter] (same logic as a screener run).
   Future<ScreenerResult?> analyzeStock(
     StockSymbol stock,
-    ScreenerFilter filter,
-  ) =>
-      _processStock(stock, filter);
+    ScreenerFilter filter, {
+    Map<String, double>? marketCaps,
+  }) async {
+    Map<String, double> caps = marketCaps ?? const {};
+    if (filter.useQualityFilter &&
+        filter.qualityParams.minMarketCapCrore > 0 &&
+        caps.isEmpty &&
+        (stock.market == 'NSE' || stock.market == 'BSE')) {
+      caps = await _loadMarketCaps([stock]);
+    }
+    return _processStock(stock, filter, caps);
+  }
+
+  /// Same as [analyzeStock] but keeps stocks that fail the quality gate (for search UI).
+  Future<ScreenerResult?> analyzeStockForSearch(
+    StockSymbol stock,
+    ScreenerFilter filter, {
+    Map<String, double>? marketCaps,
+  }) async {
+    Map<String, double> caps = marketCaps ?? const {};
+    if (filter.useQualityFilter &&
+        filter.qualityParams.minMarketCapCrore > 0 &&
+        caps.isEmpty &&
+        (stock.market == 'NSE' || stock.market == 'BSE')) {
+      caps = await _loadMarketCaps([stock]);
+    }
+    return _processStock(stock, filter, caps, applyQualityGate: false);
+  }
 
   /// Whether [result] would be included in screener results for [filter].
   bool passesScreenerFilter(ScreenerResult result, ScreenerFilter filter) =>
@@ -369,11 +458,28 @@ class ScreenerService {
     StockSymbol stock,
     ScreenerFilter filter,
   ) async {
-    ScreenerResult? result = await analyzeStock(stock, filter);
+    Map<String, double> caps = const {};
+    if (filter.useQualityFilter &&
+        filter.qualityParams.minMarketCapCrore > 0 &&
+        (stock.market == 'NSE' || stock.market == 'BSE')) {
+      caps = await _loadMarketCaps([stock]);
+    }
+
+    ScreenerResult? result = await analyzeStockForSearch(stock, filter, marketCaps: caps);
 
     if (result == null) return null;
 
-    if (!filter.hasAnyFilter) {
+    final qualityPasses = passesQualityFilter(
+      result.candles,
+      stock,
+      filter,
+      marketCaps: caps,
+    );
+    final qualityLabel = filter.useQualityFilter
+        ? StockQualityFilter.criteriaLabel(filter.qualityParams)
+        : null;
+
+    if (!filter.hasIndicatorFilters) {
       final allIndicators = await computeAllIndicators(result.candles);
       result = ScreenerResult(
         quote: result.quote,
@@ -395,8 +501,10 @@ class ScreenerService {
       return StockSearchAnalysis(
         result: result,
         statuses: statuses,
-        passesScreener: false,
-        hasActiveFilters: false,
+        passesScreener: filter.useQualityFilter ? qualityPasses : false,
+        hasActiveFilters: filter.useQualityFilter,
+        qualityPasses: filter.useQualityFilter ? qualityPasses : null,
+        qualityCriteriaLabel: qualityLabel,
       );
     }
 
@@ -404,8 +512,11 @@ class ScreenerService {
     return StockSearchAnalysis(
       result: result,
       statuses: statuses,
-      passesScreener: passesScreenerFilter(result, filter),
+      passesScreener:
+          qualityPasses && passesScreenerFilter(result, filter),
       hasActiveFilters: true,
+      qualityPasses: filter.useQualityFilter ? qualityPasses : null,
+      qualityCriteriaLabel: qualityLabel,
     );
   }
 

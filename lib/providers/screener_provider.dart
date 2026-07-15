@@ -6,7 +6,8 @@ import 'sync_provider.dart'
     show
         cacheServiceProvider,
         dataSyncServiceProvider,
-        supabaseServiceProvider;
+        supabaseServiceProvider,
+        yahooFinanceServiceProvider;
 
 // Re-export so existing imports of yahooFinanceServiceProvider keep working
 export 'sync_provider.dart' show yahooFinanceServiceProvider;
@@ -16,6 +17,7 @@ final screenerServiceProvider = Provider<ScreenerService>((ref) {
     ref.watch(cacheServiceProvider),
     ref.watch(dataSyncServiceProvider),
     ref.watch(supabaseServiceProvider),
+    ref.watch(yahooFinanceServiceProvider),
   );
 });
 
@@ -117,6 +119,14 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
 
   void updateSethiParams(SethiFilterParams params) {
     state = state.copyWith(sethiParams: params);
+  }
+
+  void toggleQualityFilter(bool enabled) {
+    state = state.copyWith(useQualityFilter: enabled);
+  }
+
+  void updateQualityParams(QualityFilterParams params) {
+    state = state.copyWith(qualityParams: params);
   }
 
   void setRequireAllFilters(bool value) {
