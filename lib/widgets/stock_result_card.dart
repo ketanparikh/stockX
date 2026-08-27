@@ -112,6 +112,13 @@ class StockResultCard extends ConsumerWidget {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
+                      if (quote.asOf != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _formatAsOf(quote.asOf!),
+                          style: TextStyle(color: c.textMuted, fontSize: 10),
+                        ),
+                      ],
                       const SizedBox(height: 2),
                       Row(
                         mainAxisSize: MainAxisSize.min,
@@ -209,7 +216,7 @@ class StockResultCard extends ConsumerWidget {
     }
 
     final int age = indicator.signalAge;
-    final String ageLabel = age == 0 ? '⚡ Today' : '${age}d';
+    final String ageLabel = age == 0 ? 'Today' : '$age bar${age == 1 ? '' : 's'}';
     final Color ageColor = age == 0
         ? AppColors.bullish
         : age <= 3
@@ -250,5 +257,13 @@ class StockResultCard extends ConsumerWidget {
   String _formatPrice(double price, String market) {
     if (market == 'NSE' || market == 'BSE') return '₹${price.toStringAsFixed(2)}';
     return '\$${price.toStringAsFixed(2)}';
+  }
+
+  String _formatAsOf(DateTime asOf) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return 'Close ${asOf.day} ${months[asOf.month - 1]}';
   }
 }

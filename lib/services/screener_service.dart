@@ -14,6 +14,7 @@ import '../models/indicator_result.dart';
 import '../models/screener_filter.dart';
 import '../models/screener_result.dart';
 import '../models/screener_result_codec.dart';
+import '../utils/candle_series.dart';
 import '../utils/constants.dart';
 import '../utils/screener_filter_fingerprint.dart';
 import '../utils/stock_symbols.dart';
@@ -77,8 +78,11 @@ class ScreenerService {
             (sym) => _cache.get(sym, filter.timeframe) ?? const [],
           );
           if (cached.isNotEmpty) {
-            onProgress?.call(stocksToScreen.length, stocksToScreen.length);
-            return _applyMaxResults(cached, filter.maxResults);
+            final kept = cached.where((r) => _passesFilter(r, filter)).toList();
+            if (kept.isNotEmpty) {
+              onProgress?.call(stocksToScreen.length, stocksToScreen.length);
+              return _applyMaxResults(kept, filter.maxResults);
+            }
           }
         }
       }
@@ -220,7 +224,13 @@ class ScreenerService {
         candles = fetched;
       }
 
+      candles = CandleSeries.sorted(candles);
       if (candles.length < 2) return null;
+
+      if (filter.requireFreshSignal &&
+          !CandleSeries.isCurrent(candles, filter.timeframe)) {
+        return null;
+      }
 
       if (filter.useQualityFilter && applyQualityGate) {
         final ok = StockQualityFilter.passes(
@@ -234,7 +244,7 @@ class ScreenerService {
 
       // Derive the quote from candle data — avoids a second API call
       // and the rate-limit / CORS failures that killed results silently.
-      final quote = _quoteFromCandles(stock, candles);
+      final quote = CandleSeries.quoteFromCandles(stock, candles);
 
       final indicators = _computeIndicators(candles, filter, stock.symbol);
 
@@ -262,35 +272,6 @@ class ScreenerService {
     } catch (_) {
       return null;
     }
-  }
-
-  /// Build a StockQuote from the last two candles.
-  /// Covers price, daily change, volume — no extra API call needed.
-  StockQuote _quoteFromCandles(StockSymbol stock, List<CandleData> candles) {
-    final last = candles.last;
-    final prev = candles[candles.length - 2];
-    final change = last.close - prev.close;
-    final changePct = prev.close != 0 ? (change / prev.close) * 100 : 0.0;
-
-    var week52High = candles.first.high;
-    var week52Low = candles.first.low;
-    for (final c in candles) {
-      if (c.high > week52High) week52High = c.high;
-      if (c.low < week52Low) week52Low = c.low;
-    }
-
-    return StockQuote(
-      symbol: stock.symbol,
-      name: stock.name,
-      market: stock.market,
-      sector: stock.sector,
-      price: last.close,
-      change: change,
-      changePercent: changePct,
-      volume: last.volume,
-      week52High: week52High,
-      week52Low: week52Low,
-    );
   }
 
   List<IndicatorResult> _computeIndicators(
@@ -326,9 +307,16 @@ class ScreenerService {
     }
 
     if (filter.useEma10Cross) {
+      var emaParams = filter.ema10CrossParams;
+      if (filter.requireFreshSignal &&
+          emaParams.crossLookback > filter.freshSignalMaxBars) {
+        emaParams = emaParams.copyWith(
+          crossLookback: filter.freshSignalMaxBars,
+        );
+      }
       final result = Ema10CrossIndicator.calculate(
         candles,
-        filter.ema10CrossParams,
+        emaParams,
         symbol: symbol,
       );
       if (result != null) indicators.add(result);
@@ -393,6 +381,9 @@ class ScreenerService {
       if (!signalOk) return false;
 
       if (filter.requireFreshSignal) {
+        if (!CandleSeries.isCurrent(result.candles, filter.timeframe)) {
+          return false;
+        }
         final matchingIndicators = result.indicators
             .where((ind) => _indicatorMatchesFilter(ind, filter));
         final allFresh = matchingIndicators

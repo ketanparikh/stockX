@@ -1,6 +1,7 @@
 import 'candle_data.dart';
 import 'indicator_result.dart';
 import 'screener_result.dart';
+import '../utils/candle_series.dart';
 
 const _codecVersion = 1;
 
@@ -32,6 +33,7 @@ Map<String, dynamic> _encodeQuote(StockQuote q) => {
       'v': q.volume,
       'h52': q.week52High,
       'l52': q.week52Low,
+      'as': q.asOf?.millisecondsSinceEpoch,
     };
 
 StockQuote _decodeQuote(Map<String, dynamic> m) => StockQuote(
@@ -45,6 +47,9 @@ StockQuote _decodeQuote(Map<String, dynamic> m) => StockQuote(
       volume: (m['v'] as num).toDouble(),
       week52High: m['h52'] == null ? null : (m['h52'] as num).toDouble(),
       week52Low: m['l52'] == null ? null : (m['l52'] as num).toDouble(),
+      asOf: m['as'] is num
+          ? DateTime.fromMillisecondsSinceEpoch((m['as'] as num).toInt())
+          : null,
     );
 
 String _sigName(SignalType s) {
@@ -302,8 +307,26 @@ List<ScreenerResult> decodeScreenerResultsPayload(
     if (qm is! Map) continue;
     final quoteMap = Map<String, dynamic>.from(qm);
     final quote = _decodeQuote(quoteMap);
-    final candles = candlesFor(quote.symbol);
+    final candles = CandleSeries.sorted(candlesFor(quote.symbol));
     if (candles.length < 2) continue;
+
+    final last = candles.last;
+    final prev = candles[candles.length - 2];
+    final change = last.close - prev.close;
+    final liveQuote = StockQuote(
+      symbol: quote.symbol,
+      name: quote.name,
+      market: quote.market,
+      sector: quote.sector,
+      price: last.close,
+      change: change,
+      changePercent: prev.close != 0 ? (change / prev.close) * 100 : 0.0,
+      volume: last.volume,
+      marketCap: quote.marketCap,
+      week52High: quote.week52High,
+      week52Low: quote.week52Low,
+      asOf: last.timestamp,
+    );
 
     final il = row['i'];
     if (il is! List) continue;
@@ -316,7 +339,7 @@ List<ScreenerResult> decodeScreenerResultsPayload(
 
     out.add(
       ScreenerResult(
-        quote: quote,
+        quote: liveQuote,
         candles: candles,
         indicators: indicators,
         matchingFilters: (row['m'] as num?)?.toInt() ?? 0,

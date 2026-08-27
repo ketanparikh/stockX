@@ -112,6 +112,13 @@ class StockDetailScreen extends ConsumerWidget {
               ),
             ],
           ),
+          if (quote.asOf != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Last close ${_formatAsOf(quote.asOf!)}',
+              style: TextStyle(color: c.textMuted, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 8),
           Row(
             children: [
@@ -205,12 +212,18 @@ class StockDetailScreen extends ConsumerWidget {
             touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => c.card,
               tooltipBorder: BorderSide(color: c.border),
-              getTooltipItems: (spots) => spots
-                  .map((s) => LineTooltipItem(
-                        _formatPrice(s.y, 'NSE'),
-                        TextStyle(color: c.textPrimary, fontSize: 11, fontWeight: FontWeight.w600),
-                      ))
-                  .toList(),
+              getTooltipItems: (spots) => spots.map((s) {
+                final i = s.x.round().clamp(0, chartCandles.length - 1);
+                final ts = chartCandles[i].timestamp;
+                return LineTooltipItem(
+                  '${_formatAsOf(ts)}\n${_formatPrice(s.y, 'NSE')}',
+                  TextStyle(
+                    color: c.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ),
@@ -273,6 +286,14 @@ class StockDetailScreen extends ConsumerWidget {
         Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
       ],
     );
+  }
+
+  String _formatAsOf(DateTime asOf) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${asOf.day} ${months[asOf.month - 1]}';
   }
 
   String _formatPrice(double price, String market) {

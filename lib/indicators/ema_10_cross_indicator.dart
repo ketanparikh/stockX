@@ -59,7 +59,6 @@ class Ema10CrossIndicator {
     final signal = history.isEmpty ? SignalType.neutral : history.last;
     final setupActive = signal == SignalType.buy;
     final exitActive = signal == SignalType.sell;
-    final age = IndicatorUtils.signalAge(history, maxLookback: _kHistoryLen);
 
     final int cross30Age;
     final int cross48Age;
@@ -70,6 +69,11 @@ class Ema10CrossIndicator {
       cross30Age = _barsSinceCrossAbove(ema10, ema30, last) ?? _kHistoryLen;
       cross48Age = _barsSinceCrossAbove(ema10, ema48, last) ?? _kHistoryLen;
     }
+    final completingAge =
+        cross30Age < cross48Age ? cross30Age : cross48Age;
+    final age = (setupActive || exitActive)
+        ? completingAge
+        : IndicatorUtils.signalAge(history, maxLookback: _kHistoryLen);
 
     String? skipReason;
     if (!setupActive && !exitActive) {

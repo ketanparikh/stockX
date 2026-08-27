@@ -115,6 +115,10 @@ void main() {
     expect(result.setupActive, isTrue);
     expect(result.signal, SignalType.buy);
     expect(result.cross30Age <= 5 || result.cross48Age <= 5, isTrue);
+    final completing =
+        result.cross30Age < result.cross48Age ? result.cross30Age : result.cross48Age;
+    expect(result.signalAge, completing,
+        reason: 'fresh-signal age is the completing 10/30 or 10/48 cross');
     expect(
       Ema10CrossIndicator.matchesFilter(
         result,

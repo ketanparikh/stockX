@@ -14,6 +14,9 @@ class StockQuote {
   final double? week52High;
   final double? week52Low;
 
+  /// Timestamp of the last candle used for [price].
+  final DateTime? asOf;
+
   const StockQuote({
     required this.symbol,
     required this.name,
@@ -26,6 +29,7 @@ class StockQuote {
     this.marketCap,
     this.week52High,
     this.week52Low,
+    this.asOf,
   });
 
   bool get isPositive => change >= 0;
