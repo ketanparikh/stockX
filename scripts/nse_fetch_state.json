@@ -1,0 +1,172 @@
+{
+  "excluded": [
+    "AKZOINDIA",
+    "CIGNITITEC",
+    "CREATIVE",
+    "EXCEL",
+    "FSC",
+    "GSPL",
+    "GUJGASLTD",
+    "HEUBACHIND",
+    "INFIBEAM",
+    "JCHAC",
+    "LTIM",
+    "LYPSAGEMS",
+    "MEGASOFT",
+    "MIRCELECTR",
+    "PNJGB",
+    "ROLTA",
+    "SABTNL",
+    "SANGHIIND",
+    "SASTASUNDR",
+    "SEQUENT",
+    "SGLTL",
+    "SMSLIFE",
+    "UDAICEMENT",
+    "VISASTEEL",
+    "ZYDUSLIFE",
+    "ZYDUSWELL"
+  ],
+  "failures": {
+    "AKZOINDIA": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "AVL": {
+      "consecutive": 1,
+      "last_attempt": "2026-08-20T16:38:35Z",
+      "reason": "no_data"
+    },
+    "AWHCL": {
+      "consecutive": 1,
+      "last_attempt": "2026-08-20T16:38:35Z",
+      "reason": "no_data"
+    },
+    "CIGNITITEC": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "CREATIVE": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "EXCEL": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "FSC": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "GSPL": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "GUJGASLTD": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-23T16:14:44Z",
+      "reason": "no_data"
+    },
+    "HEUBACHIND": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "INFIBEAM": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "JCHAC": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "LTIM": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "LYPSAGEMS": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-28T16:49:53Z",
+      "reason": "no_data"
+    },
+    "MEGASOFT": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "MIRCELECTR": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "PNJGB": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "ROLTA": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "SABTNL": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "SANGHIIND": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "SASTASUNDR": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "SEQUENT": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "SGLTL": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "SMSLIFE": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "UDAICEMENT": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "VISASTEEL": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    },
+    "ZYDUSLIFE": {
+      "consecutive": 3,
+      "last_attempt": "2026-08-05T17:02:34Z",
+      "reason": "no_data"
+    },
+    "ZYDUSWELL": {
+      "consecutive": 3,
+      "last_attempt": "2026-07-14T18:34:22Z",
+      "reason": "audit_no_data"
+    }
+  }
+}

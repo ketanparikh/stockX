@@ -39,6 +39,8 @@ MIN_BARS = 220
 
 
 def load_symbols(csv_path: Path | None, limit: int | None) -> list[str]:
+    from fetch_symbol_registry import filter_symbols
+
     if csv_path is not None and csv_path.is_file():
         base = (
             pd.read_csv(csv_path)["Symbol"]
@@ -49,7 +51,7 @@ def load_symbols(csv_path: Path | None, limit: int | None) -> list[str]:
             .tolist()
         )
     else:
-        base = list(NSE_SYMBOLS)
+        base = filter_symbols(list(NSE_SYMBOLS))
     if limit is not None:
         base = base[:limit]
     return [f"{s}.NS" for s in base]
@@ -301,6 +303,8 @@ def size_trades_long(raw: list[dict], initial: float, position_pct: float) -> pd
         alloc = equity * position_pct
         entry = float(r["Entry Price"])
         exit_px = float(r["Exit Price"])
+        if not np.isfinite(entry) or not np.isfinite(exit_px) or entry <= 0:
+            continue
         shares = int(alloc // entry)
         if shares < 1:
             continue

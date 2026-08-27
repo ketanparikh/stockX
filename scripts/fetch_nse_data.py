@@ -43,6 +43,13 @@ from supabase import create_client, Client
 from tqdm import tqdm
 
 import config
+from fetch_symbol_registry import (
+    filter_symbols,
+    load_excluded,
+    record_failure,
+    record_success,
+    summary as registry_summary,
+)
 
 # ── NSE symbol list (base symbols, .NS suffix added automatically) ────────────
 NSE_SYMBOLS = [
@@ -510,12 +517,15 @@ def main():
     args = parser.parse_args()
 
     period = config.FETCH_RANGE.get(args.timeframe, "1y")
-    symbols = NSE_SYMBOLS[: args.limit] if args.limit else NSE_SYMBOLS
+    all_symbols = NSE_SYMBOLS[: args.limit] if args.limit else list(NSE_SYMBOLS)
+    excluded = load_excluded()
+    symbols = filter_symbols(all_symbols)
+    skipped_excluded = len(all_symbols) - len(symbols)
 
     print("=" * 60)
     print(f"  StockX — NSE Data Fetch")
     print(f"  Timeframe : {args.timeframe}   Period: {period}")
-    print(f"  Symbols   : {len(symbols)}")
+    print(f"  Symbols   : {len(symbols)} ({skipped_excluded} excluded from registry)")
     print(f"  Batch size: {args.batch_size}   Delay: {args.delay}s")
     print(f"  Dry run   : {args.dry_run}   Resume: {args.resume}")
     print("=" * 60)
@@ -554,7 +564,9 @@ def main():
                 df = fetched.get(yahoo_sym)
                 if df is None:
                     failed += 1
+                    record_failure(sym)
                 else:
+                    record_success(sym)
                     if not args.dry_run:
                         upsert_rows.append(df_to_row(sym, args.timeframe, df))
                     success += 1
@@ -576,6 +588,7 @@ def main():
     print(f"  Done at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Fetched  : {success} / {total}")
     print(f"  Failed   : {failed}  (no data or < {config.MIN_BARS} bars)")
+    print(f"  Registry : {registry_summary().replace(chr(10), ' | ')}")
     if args.dry_run:
         print("  Supabase : SKIPPED (dry-run mode)")
     else:
