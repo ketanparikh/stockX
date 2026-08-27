@@ -97,6 +97,14 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
     state = state.copyWith(emaParams: params);
   }
 
+  void toggleEma10Cross(bool enabled) {
+    state = state.copyWith(useEma10Cross: enabled);
+  }
+
+  void updateEma10CrossParams(Ema10CrossFilterParams params) {
+    state = state.copyWith(ema10CrossParams: params);
+  }
+
   void toggleBollinger(bool enabled) {
     state = state.copyWith(useBollinger: enabled);
   }

@@ -109,6 +109,23 @@ Map<String, dynamic> encodeIndicator(IndicatorResult r) {
       'c': r.value3 ?? 0.0,
     };
   }
+  if (r is Ema10CrossResult) {
+    return {
+      'k': 'ema10',
+      'sig': sig,
+      'age': age,
+      'e10': r.ema10,
+      'e30': r.ema30,
+      'e48': r.ema48,
+      'e200': r.ema200,
+      'a30': r.cross30Age,
+      'a48': r.cross48Age,
+      'active': r.setupActive,
+      'exit': r.exitActive,
+      'skip': r.skipReason,
+      'st': r.requireSupertrend,
+    };
+  }
   if (r is EmaResult) {
     return {
       'k': 'ema',
@@ -192,6 +209,21 @@ IndicatorResult decodeIndicator(Map<String, dynamic> m) {
         macdLine: (m['a'] as num).toDouble(),
         signalLine: (m['b'] as num).toDouble(),
         histogram: (m['c'] as num).toDouble(),
+        signal: sig,
+        signalAge: age,
+      );
+    case 'ema10':
+      return Ema10CrossResult(
+        ema10: (m['e10'] as num).toDouble(),
+        ema30: (m['e30'] as num).toDouble(),
+        ema48: (m['e48'] as num).toDouble(),
+        ema200: (m['e200'] as num).toDouble(),
+        cross30Age: (m['a30'] as num?)?.toInt() ?? 0,
+        cross48Age: (m['a48'] as num?)?.toInt() ?? 0,
+        setupActive: m['active'] as bool? ?? sig == SignalType.buy,
+        exitActive: m['exit'] as bool? ?? sig == SignalType.sell,
+        skipReason: m['skip'] as String?,
+        requireSupertrend: m['st'] as bool? ?? false,
         signal: sig,
         signalAge: age,
       );

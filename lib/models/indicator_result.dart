@@ -153,6 +153,77 @@ class EmaResult extends IndicatorResult {
         );
 }
 
+class Ema10CrossResult extends IndicatorResult {
+  static const String resultName = 'EMA 10 Cross';
+
+  final double ema10;
+  final double ema30;
+  final double ema48;
+  final double ema200;
+  final int cross30Age;
+  final int cross48Age;
+  final bool setupActive;
+  final bool exitActive;
+  final String? skipReason;
+  final bool requireSupertrend;
+
+  Ema10CrossResult({
+    required this.ema10,
+    required this.ema30,
+    required this.ema48,
+    required this.ema200,
+    required this.cross30Age,
+    required this.cross48Age,
+    required this.setupActive,
+    this.exitActive = false,
+    this.skipReason,
+    this.requireSupertrend = false,
+    required SignalType signal,
+    int signalAge = 0,
+  }) : super(
+          name: resultName,
+          value: ema10,
+          value2: ema30,
+          value3: ema200,
+          signal: signal,
+          description: _buildDescription(
+            signal: signal,
+            cross30Age: cross30Age,
+            cross48Age: cross48Age,
+            skipReason: skipReason,
+            requireSupertrend: requireSupertrend,
+          ),
+          signalAge: signalAge,
+        );
+
+  static String _ageLabel(int age) {
+    if (age == 0) return 'today';
+    if (age == 1) return '1 bar ago';
+    return '$age bars ago';
+  }
+
+  static String _buildDescription({
+    required SignalType signal,
+    required int cross30Age,
+    required int cross48Age,
+    String? skipReason,
+    required bool requireSupertrend,
+  }) {
+    if (skipReason != null) {
+      return 'BUY skipped: $skipReason';
+    }
+    if (signal == SignalType.buy) {
+      final st = requireSupertrend ? ' · ST BUY' : '';
+      return 'Close > 10/200$st · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
+    }
+    if (signal == SignalType.sell) {
+      final st = requireSupertrend ? 'ST SELL or ' : '';
+      return 'Exit: ${st}10 below 30 & 48 · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
+    }
+    return 'No entry/exit (need 10 above or below both 30 & 48)';
+  }
+}
+
 class BollingerResult extends IndicatorResult {
   BollingerResult({
     required double upper,

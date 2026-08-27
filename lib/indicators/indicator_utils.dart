@@ -38,6 +38,17 @@ class IndicatorUtils {
     return result;
   }
 
+  /// Full-length EMA: index i is null until [period - 1].
+  static List<double?> emaAligned(List<double> values, int period) {
+    final raw = ema(values, period);
+    final out = List<double?>.filled(values.length, null);
+    final start = period - 1;
+    for (var k = 0; k < raw.length; k++) {
+      out[start + k] = raw[k];
+    }
+    return out;
+  }
+
   /// Wilder EMA (smoothing factor = 1/period), seeded with SMA of first [period] values.
   /// Used for ATR and ADX calculations.
   /// Output length = values.length - period + 1.

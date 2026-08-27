@@ -37,6 +37,18 @@ class AppConstants {
   static const double defaultMinMarketCapCrore = 15000.0;
   static const double defaultQualityVolumeMultiplier = 1.5;
 
+  // EMA 10 Cross: price above 10/200, EMA 10 crossed above 30 and 48
+  static const int defaultEma10Period = 10;
+  static const int defaultEma10MidFastPeriod = 30;
+  static const int defaultEma10MidSlowPeriod = 48;
+  static const int defaultEma10TrendPeriod = 200;
+  static const int defaultEma10CrossLookback = 5;
+  static const int defaultEma10VolumeLookback = 20;
+  /// Skip BUY when 20-day rupee ADV is below this (₹10 lakh).
+  static const double defaultEma10MinAdvInr = 1000000.0;
+  /// Skip BUY when signal-day volume exceeds this multiple of the prior 20D avg.
+  static const double defaultEma10MaxVolumeMultiplier = 2.0;
+
   static const int maxCandlesForIndicators = 300;
 
   /// Supabase `screener_filter_cache` rows older than this are ignored; a new

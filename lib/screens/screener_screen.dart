@@ -94,6 +94,10 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                 sliver: SliverToBoxAdapter(child: _buildSethiFilter(filter)),
               ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                sliver: SliverToBoxAdapter(child: _buildEma10CrossFilter(filter)),
+              ),
               // RSI Filter
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -1306,6 +1310,105 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             divisions: 36,
             onChanged: (v) => ref.read(screenerFilterProvider.notifier).updateEmaParams(
                   filter.emaParams.copyWith(slowPeriod: v.toInt()),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEma10CrossFilter(ScreenerFilter filter) {
+    return FilterSection(
+      title: 'EMA 10 Cross',
+      icon: Icons.timeline,
+      description:
+          'BUY: 10/200 stack · skip illiquid, climax volume, defensive names',
+      enabled: filter.useEma10Cross,
+      onToggle: (v) =>
+          ref.read(screenerFilterProvider.notifier).toggleEma10Cross(v),
+      child: Column(
+        children: [
+          SignalSelector(
+            value: filter.ema10CrossParams.signal,
+            onChanged: (s) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(signal: s),
+                ),
+            options: const ['BUY', 'SELL', 'ANY', 'NEUTRAL'],
+          ),
+          const SizedBox(height: 10),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Skip illiquid'),
+            subtitle: const Text(
+              'No BUY if 20-day rupee ADV is under ₹10 lakh.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: filter.ema10CrossParams.skipIlliquid,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(skipIlliquid: v),
+                ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Skip climax volume'),
+            subtitle: const Text(
+              'No BUY if signal-day volume is above 2× the prior 20-day average.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: filter.ema10CrossParams.skipClimaxVolume,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(skipClimaxVolume: v),
+                ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Skip defensive names'),
+            subtitle: const Text(
+              'No BUY on FMCG, paints, insurance, OMCs, defence PSUs, large IT.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: filter.ema10CrossParams.skipDefensive,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(skipDefensive: v),
+                ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Require Supertrend'),
+            subtitle: const Text(
+              'Off by default — ST SELL cuts the 60–80 day runners.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: filter.ema10CrossParams.requireSupertrend,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(requireSupertrend: v),
+                ),
+          ),
+          LabeledSlider(
+            label: 'Entry/exit completed within',
+            value: filter.ema10CrossParams.crossLookback.toDouble(),
+            min: 0,
+            max: 10,
+            divisions: 10,
+            formatter: (v) => v == 0 ? 'today' : '${v.toStringAsFixed(0)} bars',
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(crossLookback: v.toInt()),
                 ),
           ),
         ],

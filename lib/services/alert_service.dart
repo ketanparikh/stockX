@@ -2,6 +2,7 @@ import '../indicators/adx_indicator.dart';
 import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
 import '../indicators/chandelier_exit_indicator.dart';
+import '../indicators/ema_10_cross_indicator.dart';
 import '../indicators/ema_indicator.dart';
 import '../indicators/macd_indicator.dart';
 import '../indicators/rsi_indicator.dart';
@@ -31,7 +32,7 @@ class AlertService {
           cache.get(entry.symbol, 'weekly');
       if (candles == null || candles.length < 30) continue;
 
-      final current = _computeAll(candles);
+      final current = _computeAll(candles, entry.symbol);
 
       for (final saved in entry.savedSignals) {
         try {
@@ -63,7 +64,7 @@ class AlertService {
 
   // ── Synchronous all-indicators computation ─────────────────────────────────
 
-  List<IndicatorResult> _computeAll(List<CandleData> candles) {
+  List<IndicatorResult> _computeAll(List<CandleData> candles, String symbol) {
     final results = <IndicatorResult>[];
 
     final rsi = RsiIndicator.calculate(candles, const RsiFilterParams());
@@ -80,6 +81,13 @@ class AlertService {
 
     final ema = EmaIndicator.calculate(candles, const EmaFilterParams());
     if (ema != null) results.add(ema);
+
+    final ema10 = Ema10CrossIndicator.calculate(
+      candles,
+      const Ema10CrossFilterParams(),
+      symbol: symbol,
+    );
+    if (ema10 != null) results.add(ema10);
 
     final bb = BollingerBandsIndicator.calculate(candles, const BollingerFilterParams());
     if (bb != null) results.add(bb);

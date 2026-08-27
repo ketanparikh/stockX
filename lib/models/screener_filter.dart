@@ -7,6 +7,7 @@ enum IndicatorType {
   chandelierExit,
   macd,
   emaCrossover,
+  ema10Cross,
   bollingerBands,
   adx,
   sethi,
@@ -25,6 +26,8 @@ extension IndicatorTypeExt on IndicatorType {
         return 'MACD';
       case IndicatorType.emaCrossover:
         return 'EMA Crossover';
+      case IndicatorType.ema10Cross:
+        return 'EMA 10 Cross';
       case IndicatorType.bollingerBands:
         return 'Bollinger Bands';
       case IndicatorType.adx:
@@ -46,6 +49,8 @@ extension IndicatorTypeExt on IndicatorType {
         return 'Trend-following momentum indicator using EMAs';
       case IndicatorType.emaCrossover:
         return 'Fast and slow EMA crossover signals';
+      case IndicatorType.ema10Cross:
+        return 'Close above 10/200, 10 crossed 30 & 48; skip illiquid, climax volume, and defensive names';
       case IndicatorType.bollingerBands:
         return 'Volatility bands around a moving average';
       case IndicatorType.adx:
@@ -67,6 +72,8 @@ extension IndicatorTypeExt on IndicatorType {
         return Icons.bar_chart;
       case IndicatorType.emaCrossover:
         return Icons.swap_vert;
+      case IndicatorType.ema10Cross:
+        return Icons.timeline;
       case IndicatorType.bollingerBands:
         return Icons.compress;
       case IndicatorType.adx:
@@ -199,6 +206,82 @@ class MacdFilterParams {
         fastPeriod: fastPeriod ?? this.fastPeriod,
         slowPeriod: slowPeriod ?? this.slowPeriod,
         signalPeriod: signalPeriod ?? this.signalPeriod,
+        signal: signal ?? this.signal,
+      );
+}
+
+class Ema10CrossFilterParams {
+  final int fastPeriod;
+  final int midFastPeriod;
+  final int midSlowPeriod;
+  final int trendPeriod;
+
+  /// The later of the 10/30 and 10/48 crosses (up for entry, down for exit)
+  /// must fall within this many bars. 0 = completing cross on the latest bar.
+  final int crossLookback;
+
+  /// When true, BUY also requires Supertrend BUY; SELL if Supertrend SELL
+  /// or EMA 10 is below 30 and 48.
+  final bool requireSupertrend;
+
+  /// Skip BUY when 20-day rupee ADV is below [minAdvInr].
+  final bool skipIlliquid;
+  final int volumeLookback;
+  final double minAdvInr;
+
+  /// Skip BUY when signal-day volume exceeds [maxVolumeMultiplier] × 20D avg.
+  final bool skipClimaxVolume;
+  final double maxVolumeMultiplier;
+
+  /// Skip BUY on FMCG, insurance, OMCs, defence PSUs, and large IT.
+  final bool skipDefensive;
+
+  final String signal;
+
+  const Ema10CrossFilterParams({
+    this.fastPeriod = AppConstants.defaultEma10Period,
+    this.midFastPeriod = AppConstants.defaultEma10MidFastPeriod,
+    this.midSlowPeriod = AppConstants.defaultEma10MidSlowPeriod,
+    this.trendPeriod = AppConstants.defaultEma10TrendPeriod,
+    this.crossLookback = AppConstants.defaultEma10CrossLookback,
+    this.requireSupertrend = false,
+    this.skipIlliquid = true,
+    this.volumeLookback = AppConstants.defaultEma10VolumeLookback,
+    this.minAdvInr = AppConstants.defaultEma10MinAdvInr,
+    this.skipClimaxVolume = true,
+    this.maxVolumeMultiplier = AppConstants.defaultEma10MaxVolumeMultiplier,
+    this.skipDefensive = true,
+    this.signal = FilterSignal.buy,
+  });
+
+  Ema10CrossFilterParams copyWith({
+    int? fastPeriod,
+    int? midFastPeriod,
+    int? midSlowPeriod,
+    int? trendPeriod,
+    int? crossLookback,
+    bool? requireSupertrend,
+    bool? skipIlliquid,
+    int? volumeLookback,
+    double? minAdvInr,
+    bool? skipClimaxVolume,
+    double? maxVolumeMultiplier,
+    bool? skipDefensive,
+    String? signal,
+  }) =>
+      Ema10CrossFilterParams(
+        fastPeriod: fastPeriod ?? this.fastPeriod,
+        midFastPeriod: midFastPeriod ?? this.midFastPeriod,
+        midSlowPeriod: midSlowPeriod ?? this.midSlowPeriod,
+        trendPeriod: trendPeriod ?? this.trendPeriod,
+        crossLookback: crossLookback ?? this.crossLookback,
+        requireSupertrend: requireSupertrend ?? this.requireSupertrend,
+        skipIlliquid: skipIlliquid ?? this.skipIlliquid,
+        volumeLookback: volumeLookback ?? this.volumeLookback,
+        minAdvInr: minAdvInr ?? this.minAdvInr,
+        skipClimaxVolume: skipClimaxVolume ?? this.skipClimaxVolume,
+        maxVolumeMultiplier: maxVolumeMultiplier ?? this.maxVolumeMultiplier,
+        skipDefensive: skipDefensive ?? this.skipDefensive,
         signal: signal ?? this.signal,
       );
 }
@@ -382,6 +465,8 @@ class ScreenerFilter {
   final MacdFilterParams macdParams;
   final bool useEma;
   final EmaFilterParams emaParams;
+  final bool useEma10Cross;
+  final Ema10CrossFilterParams ema10CrossParams;
   final bool useBollinger;
   final BollingerFilterParams bollingerParams;
   final bool useAdx;
@@ -417,6 +502,8 @@ class ScreenerFilter {
     this.macdParams = const MacdFilterParams(),
     this.useEma = false,
     this.emaParams = const EmaFilterParams(),
+    this.useEma10Cross = false,
+    this.ema10CrossParams = const Ema10CrossFilterParams(),
     this.useBollinger = false,
     this.bollingerParams = const BollingerFilterParams(),
     this.useAdx = false,
@@ -438,6 +525,7 @@ class ScreenerFilter {
       useChandelier ||
       useMacd ||
       useEma ||
+      useEma10Cross ||
       useBollinger ||
       useAdx ||
       useSethi;
@@ -448,6 +536,7 @@ class ScreenerFilter {
       useChandelier ||
       useMacd ||
       useEma ||
+      useEma10Cross ||
       useBollinger ||
       useAdx ||
       useSethi;
@@ -460,6 +549,7 @@ class ScreenerFilter {
     if (useChandelier) count++;
     if (useMacd) count++;
     if (useEma) count++;
+    if (useEma10Cross) count++;
     if (useBollinger) count++;
     if (useAdx) count++;
     if (useSethi) count++;
@@ -480,6 +570,8 @@ class ScreenerFilter {
     MacdFilterParams? macdParams,
     bool? useEma,
     EmaFilterParams? emaParams,
+    bool? useEma10Cross,
+    Ema10CrossFilterParams? ema10CrossParams,
     bool? useBollinger,
     BollingerFilterParams? bollingerParams,
     bool? useAdx,
@@ -507,6 +599,8 @@ class ScreenerFilter {
         macdParams: macdParams ?? this.macdParams,
         useEma: useEma ?? this.useEma,
         emaParams: emaParams ?? this.emaParams,
+        useEma10Cross: useEma10Cross ?? this.useEma10Cross,
+        ema10CrossParams: ema10CrossParams ?? this.ema10CrossParams,
         useBollinger: useBollinger ?? this.useBollinger,
         bollingerParams: bollingerParams ?? this.bollingerParams,
         useAdx: useAdx ?? this.useAdx,

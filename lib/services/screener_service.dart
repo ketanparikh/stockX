@@ -3,6 +3,7 @@ import '../indicators/adx_indicator.dart';
 import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
 import '../indicators/chandelier_exit_indicator.dart';
+import '../indicators/ema_10_cross_indicator.dart';
 import '../indicators/ema_indicator.dart';
 import '../indicators/macd_indicator.dart';
 import '../indicators/rsi_indicator.dart';
@@ -235,7 +236,7 @@ class ScreenerService {
       // and the rate-limit / CORS failures that killed results silently.
       final quote = _quoteFromCandles(stock, candles);
 
-      final indicators = _computeIndicators(candles, filter);
+      final indicators = _computeIndicators(candles, filter, stock.symbol);
 
       int matchingFilters = 0;
       int totalFilters = 0;
@@ -295,6 +296,7 @@ class ScreenerService {
   List<IndicatorResult> _computeIndicators(
     List<CandleData> candles,
     ScreenerFilter filter,
+    String symbol,
   ) {
     final indicators = <IndicatorResult>[];
 
@@ -320,6 +322,15 @@ class ScreenerService {
 
     if (filter.useEma) {
       final result = EmaIndicator.calculate(candles, filter.emaParams);
+      if (result != null) indicators.add(result);
+    }
+
+    if (filter.useEma10Cross) {
+      final result = Ema10CrossIndicator.calculate(
+        candles,
+        filter.ema10CrossParams,
+        symbol: symbol,
+      );
       if (result != null) indicators.add(result);
     }
 
@@ -357,6 +368,11 @@ class ScreenerService {
         return AdxIndicator.matchesFilter(indicator as AdxResult, filter.adxParams);
       case 'Sethi':
         return SethiIndicator.matchesFilter(indicator as SethiResult, filter.sethiParams);
+      case Ema10CrossResult.resultName:
+        return Ema10CrossIndicator.matchesFilter(
+          indicator as Ema10CrossResult,
+          filter.ema10CrossParams,
+        );
       default:
         if (indicator.name.startsWith('EMA')) {
           return EmaIndicator.matchesFilter(indicator as EmaResult, filter.emaParams);
@@ -480,7 +496,8 @@ class ScreenerService {
         : null;
 
     if (!filter.hasIndicatorFilters) {
-      final allIndicators = await computeAllIndicators(result.candles);
+      final allIndicators =
+          await computeAllIndicators(result.candles, symbol: stock.symbol);
       result = ScreenerResult(
         quote: result.quote,
         candles: result.candles,
@@ -536,6 +553,8 @@ class ScreenerService {
         return filter.useAdx;
       case 'Sethi':
         return filter.useSethi;
+      case Ema10CrossResult.resultName:
+        return filter.useEma10Cross;
       default:
         if (name.startsWith('EMA')) return filter.useEma;
         return false;
@@ -558,6 +577,19 @@ class ScreenerService {
         return 'ADX — ${filter.adxParams.signal}';
       case 'Sethi':
         return 'Sethi — ${filter.sethiParams.signal}';
+      case Ema10CrossResult.resultName:
+        final p = filter.ema10CrossParams;
+        final gates = <String>[];
+        if (p.skipIlliquid) gates.add('ADV ≥ ₹10L');
+        if (p.skipClimaxVolume) {
+          gates.add('vol ≤ ${p.maxVolumeMultiplier.toStringAsFixed(1)}×');
+        }
+        if (p.skipDefensive) gates.add('no defensive');
+        final st = p.requireSupertrend ? ' + ST BUY' : '';
+        final extra = gates.isEmpty ? '' : ' · ${gates.join(' · ')}';
+        return 'EMA 10 Cross — BUY 10/200$st$extra · '
+            'SELL ${p.requireSupertrend ? 'ST SELL or ' : ''}10 below 30 & 48 '
+            '(≤${p.crossLookback} bars)';
       default:
         if (name.startsWith('EMA')) {
           return 'EMA — ${filter.emaParams.signal}';
@@ -568,8 +600,9 @@ class ScreenerService {
 
   // Compute all indicators for a single stock (for detail view)
   Future<List<IndicatorResult>> computeAllIndicators(
-    List<CandleData> candles,
-  ) async {
+    List<CandleData> candles, {
+    String? symbol,
+  }) async {
     final indicators = <IndicatorResult>[];
 
     final rsi = RsiIndicator.calculate(candles, const RsiFilterParams());
@@ -586,6 +619,13 @@ class ScreenerService {
 
     final ema = EmaIndicator.calculate(candles, const EmaFilterParams());
     if (ema != null) indicators.add(ema);
+
+    final ema10 = Ema10CrossIndicator.calculate(
+      candles,
+      const Ema10CrossFilterParams(),
+      symbol: symbol,
+    );
+    if (ema10 != null) indicators.add(ema10);
 
     final bollinger = BollingerBandsIndicator.calculate(candles, const BollingerFilterParams());
     if (bollinger != null) indicators.add(bollinger);
