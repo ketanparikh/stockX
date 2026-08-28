@@ -37,7 +37,7 @@ class AppConstants {
   static const double defaultMinMarketCapCrore = 15000.0;
   static const double defaultQualityVolumeMultiplier = 1.5;
 
-  // EMA 10 Cross: price above 10/200, EMA 10 crossed above 30 and 48
+  // EMA 10 Cross: close above 10 and 200, EMA 10 crossed above 30 and 48
   static const int defaultEma10Period = 10;
   static const int defaultEma10MidFastPeriod = 30;
   static const int defaultEma10MidSlowPeriod = 48;
@@ -48,6 +48,14 @@ class AppConstants {
   static const double defaultEma10MinAdvInr = 1000000.0;
   /// Skip BUY when signal-day volume exceeds this multiple of the prior 20D avg.
   static const double defaultEma10MaxVolumeMultiplier = 2.0;
+
+  /// Approaching EMA 200 watchlist: 10/30/48 cross while close is still
+  /// within this percent *below* a flattening EMA 200. Do not buy yet.
+  static const double defaultApproachingEma200MaxPctBelow = 8.0;
+  static const int defaultApproachingEma200SlopeLookback = 20;
+  /// 20-bar EMA 200 change must be at least this (e.g. -2 = not falling
+  /// more than 2%). Shilpa's Mar-24 recross sat near −1.6% over 20 bars.
+  static const double defaultApproachingEma200MinSlopePct = -2.0;
 
   static const int maxCandlesForIndicators = 300;
 
@@ -84,6 +92,7 @@ class Timeframe {
 class FilterSignal {
   static const String buy = 'BUY';
   static const String sell = 'SELL';
+  static const String watch = 'WATCH';
   static const String neutral = 'NEUTRAL';
   static const String any = 'ANY';
 }

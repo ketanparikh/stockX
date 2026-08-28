@@ -109,7 +109,6 @@ void main() {
     final close = closes.last;
     expect(close > result!.ema10, isTrue, reason: 'close > EMA10');
     expect(close > result.ema200, isTrue, reason: 'close > EMA200');
-    expect(result.ema10 > result.ema200, isTrue, reason: 'EMA10 > EMA200');
     expect(result.ema10 > result.ema30, isTrue, reason: 'EMA10 > EMA30');
     expect(result.ema10 > result.ema48, isTrue, reason: 'EMA10 > EMA48');
     expect(result.setupActive, isTrue);

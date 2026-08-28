@@ -4,7 +4,7 @@ import 'indicator_result.dart';
 /// Snapshot of a single indicator's signal at the time a stock was watchlisted.
 class SavedSignal {
   final String indicatorName;
-  final String signal; // 'buy' | 'sell' | 'neutral'
+  final String signal; // 'buy' | 'sell' | 'watch' | 'neutral'
 
   const SavedSignal({required this.indicatorName, required this.signal});
 

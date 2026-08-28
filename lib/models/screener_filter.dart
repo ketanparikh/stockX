@@ -8,6 +8,7 @@ enum IndicatorType {
   macd,
   emaCrossover,
   ema10Cross,
+  approachingEma200,
   bollingerBands,
   adx,
   sethi,
@@ -28,6 +29,8 @@ extension IndicatorTypeExt on IndicatorType {
         return 'EMA Crossover';
       case IndicatorType.ema10Cross:
         return 'EMA 10 Cross';
+      case IndicatorType.approachingEma200:
+        return 'Approaching EMA 200';
       case IndicatorType.bollingerBands:
         return 'Bollinger Bands';
       case IndicatorType.adx:
@@ -50,7 +53,9 @@ extension IndicatorTypeExt on IndicatorType {
       case IndicatorType.emaCrossover:
         return 'Fast and slow EMA crossover signals';
       case IndicatorType.ema10Cross:
-        return 'Close above 10/200, 10 crossed 30 & 48; skip illiquid, climax volume, and defensive names';
+        return 'Close above EMA 10 and 200, 10 crossed 30 & 48; skip illiquid, climax volume, and defensive names';
+      case IndicatorType.approachingEma200:
+        return 'Watchlist: 10 crossed 30 & 48, close 0–8% below a flattening EMA 200. Do not buy until close reclaims 200';
       case IndicatorType.bollingerBands:
         return 'Volatility bands around a moving average';
       case IndicatorType.adx:
@@ -74,6 +79,8 @@ extension IndicatorTypeExt on IndicatorType {
         return Icons.swap_vert;
       case IndicatorType.ema10Cross:
         return Icons.timeline;
+      case IndicatorType.approachingEma200:
+        return Icons.visibility_outlined;
       case IndicatorType.bollingerBands:
         return Icons.compress;
       case IndicatorType.adx:
@@ -286,6 +293,95 @@ class Ema10CrossFilterParams {
       );
 }
 
+/// Watchlist-only: 10/30/48 just crossed while close is still under a
+/// flattening EMA 200. Not a BUY — wait for close to reclaim 200.
+class ApproachingEma200FilterParams {
+  final int fastPeriod;
+  final int midFastPeriod;
+  final int midSlowPeriod;
+  final int trendPeriod;
+  final int crossLookback;
+
+  /// Close must be at most this percent below EMA 200 (and still below).
+  final double maxPctBelow;
+
+  final int slopeLookback;
+
+  /// 20-bar EMA 200 percent change must be >= this (e.g. -2 = not falling
+  /// more than 2%).
+  final double minEma200SlopePct;
+
+  final bool skipIlliquid;
+  final int volumeLookback;
+  final double minAdvInr;
+  final bool skipClimaxVolume;
+  final double maxVolumeMultiplier;
+  final bool skipDefensive;
+  final String signal;
+
+  const ApproachingEma200FilterParams({
+    this.fastPeriod = AppConstants.defaultEma10Period,
+    this.midFastPeriod = AppConstants.defaultEma10MidFastPeriod,
+    this.midSlowPeriod = AppConstants.defaultEma10MidSlowPeriod,
+    this.trendPeriod = AppConstants.defaultEma10TrendPeriod,
+    this.crossLookback = AppConstants.defaultEma10CrossLookback,
+    this.maxPctBelow = AppConstants.defaultApproachingEma200MaxPctBelow,
+    this.slopeLookback = AppConstants.defaultApproachingEma200SlopeLookback,
+    this.minEma200SlopePct = AppConstants.defaultApproachingEma200MinSlopePct,
+    this.skipIlliquid = true,
+    this.volumeLookback = AppConstants.defaultEma10VolumeLookback,
+    this.minAdvInr = AppConstants.defaultEma10MinAdvInr,
+    this.skipClimaxVolume = true,
+    this.maxVolumeMultiplier = AppConstants.defaultEma10MaxVolumeMultiplier,
+    this.skipDefensive = true,
+    this.signal = FilterSignal.watch,
+  });
+
+  Ema10CrossFilterParams get gateParams => Ema10CrossFilterParams(
+        skipIlliquid: skipIlliquid,
+        volumeLookback: volumeLookback,
+        minAdvInr: minAdvInr,
+        skipClimaxVolume: skipClimaxVolume,
+        maxVolumeMultiplier: maxVolumeMultiplier,
+        skipDefensive: skipDefensive,
+      );
+
+  ApproachingEma200FilterParams copyWith({
+    int? fastPeriod,
+    int? midFastPeriod,
+    int? midSlowPeriod,
+    int? trendPeriod,
+    int? crossLookback,
+    double? maxPctBelow,
+    int? slopeLookback,
+    double? minEma200SlopePct,
+    bool? skipIlliquid,
+    int? volumeLookback,
+    double? minAdvInr,
+    bool? skipClimaxVolume,
+    double? maxVolumeMultiplier,
+    bool? skipDefensive,
+    String? signal,
+  }) =>
+      ApproachingEma200FilterParams(
+        fastPeriod: fastPeriod ?? this.fastPeriod,
+        midFastPeriod: midFastPeriod ?? this.midFastPeriod,
+        midSlowPeriod: midSlowPeriod ?? this.midSlowPeriod,
+        trendPeriod: trendPeriod ?? this.trendPeriod,
+        crossLookback: crossLookback ?? this.crossLookback,
+        maxPctBelow: maxPctBelow ?? this.maxPctBelow,
+        slopeLookback: slopeLookback ?? this.slopeLookback,
+        minEma200SlopePct: minEma200SlopePct ?? this.minEma200SlopePct,
+        skipIlliquid: skipIlliquid ?? this.skipIlliquid,
+        volumeLookback: volumeLookback ?? this.volumeLookback,
+        minAdvInr: minAdvInr ?? this.minAdvInr,
+        skipClimaxVolume: skipClimaxVolume ?? this.skipClimaxVolume,
+        maxVolumeMultiplier: maxVolumeMultiplier ?? this.maxVolumeMultiplier,
+        skipDefensive: skipDefensive ?? this.skipDefensive,
+        signal: signal ?? this.signal,
+      );
+}
+
 class EmaFilterParams {
   final int fastPeriod;
   final int slowPeriod;
@@ -467,6 +563,8 @@ class ScreenerFilter {
   final EmaFilterParams emaParams;
   final bool useEma10Cross;
   final Ema10CrossFilterParams ema10CrossParams;
+  final bool useApproachingEma200;
+  final ApproachingEma200FilterParams approachingEma200Params;
   final bool useBollinger;
   final BollingerFilterParams bollingerParams;
   final bool useAdx;
@@ -504,6 +602,8 @@ class ScreenerFilter {
     this.emaParams = const EmaFilterParams(),
     this.useEma10Cross = false,
     this.ema10CrossParams = const Ema10CrossFilterParams(),
+    this.useApproachingEma200 = false,
+    this.approachingEma200Params = const ApproachingEma200FilterParams(),
     this.useBollinger = false,
     this.bollingerParams = const BollingerFilterParams(),
     this.useAdx = false,
@@ -526,6 +626,7 @@ class ScreenerFilter {
       useMacd ||
       useEma ||
       useEma10Cross ||
+      useApproachingEma200 ||
       useBollinger ||
       useAdx ||
       useSethi;
@@ -537,6 +638,7 @@ class ScreenerFilter {
       useMacd ||
       useEma ||
       useEma10Cross ||
+      useApproachingEma200 ||
       useBollinger ||
       useAdx ||
       useSethi;
@@ -550,6 +652,7 @@ class ScreenerFilter {
     if (useMacd) count++;
     if (useEma) count++;
     if (useEma10Cross) count++;
+    if (useApproachingEma200) count++;
     if (useBollinger) count++;
     if (useAdx) count++;
     if (useSethi) count++;
@@ -572,6 +675,8 @@ class ScreenerFilter {
     EmaFilterParams? emaParams,
     bool? useEma10Cross,
     Ema10CrossFilterParams? ema10CrossParams,
+    bool? useApproachingEma200,
+    ApproachingEma200FilterParams? approachingEma200Params,
     bool? useBollinger,
     BollingerFilterParams? bollingerParams,
     bool? useAdx,
@@ -601,6 +706,10 @@ class ScreenerFilter {
         emaParams: emaParams ?? this.emaParams,
         useEma10Cross: useEma10Cross ?? this.useEma10Cross,
         ema10CrossParams: ema10CrossParams ?? this.ema10CrossParams,
+        useApproachingEma200:
+            useApproachingEma200 ?? this.useApproachingEma200,
+        approachingEma200Params:
+            approachingEma200Params ?? this.approachingEma200Params,
         useBollinger: useBollinger ?? this.useBollinger,
         bollingerParams: bollingerParams ?? this.bollingerParams,
         useAdx: useAdx ?? this.useAdx,

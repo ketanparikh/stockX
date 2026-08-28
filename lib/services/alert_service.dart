@@ -3,6 +3,7 @@ import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
 import '../indicators/chandelier_exit_indicator.dart';
 import '../indicators/ema_10_cross_indicator.dart';
+import '../indicators/approaching_ema200_indicator.dart';
 import '../indicators/ema_indicator.dart';
 import '../indicators/macd_indicator.dart';
 import '../indicators/rsi_indicator.dart';
@@ -88,6 +89,13 @@ class AlertService {
       symbol: symbol,
     );
     if (ema10 != null) results.add(ema10);
+
+    final approaching = ApproachingEma200Indicator.calculate(
+      candles,
+      const ApproachingEma200FilterParams(),
+      symbol: symbol,
+    );
+    if (approaching != null) results.add(approaching);
 
     final bb = BollingerBandsIndicator.calculate(candles, const BollingerFilterParams());
     if (bb != null) results.add(bb);

@@ -1,4 +1,4 @@
-enum SignalType { buy, sell, neutral }
+enum SignalType { buy, sell, watch, neutral }
 
 class IndicatorResult {
   final String name;
@@ -26,6 +26,7 @@ class IndicatorResult {
 
   bool get isBuy => signal == SignalType.buy;
   bool get isSell => signal == SignalType.sell;
+  bool get isWatch => signal == SignalType.watch;
   bool get isNeutral => signal == SignalType.neutral;
 
   /// Human-readable age label, e.g. "Today", "1 bar ago", "3 bars ago".
@@ -214,13 +215,84 @@ class Ema10CrossResult extends IndicatorResult {
     }
     if (signal == SignalType.buy) {
       final st = requireSupertrend ? ' · ST BUY' : '';
-      return 'Close > 10/200$st · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
+      return 'Close > 10 & 200$st · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
     }
     if (signal == SignalType.sell) {
       final st = requireSupertrend ? 'ST SELL or ' : '';
       return 'Exit: ${st}10 below 30 & 48 · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
     }
     return 'No entry/exit (need 10 above or below both 30 & 48)';
+  }
+}
+
+class ApproachingEma200Result extends IndicatorResult {
+  static const String resultName = 'Approaching EMA 200';
+
+  final double ema10;
+  final double ema30;
+  final double ema48;
+  final double ema200;
+  final double pctBelow200;
+  final double ema200SlopePct;
+  final int cross30Age;
+  final int cross48Age;
+  final bool watchlistActive;
+  final String? skipReason;
+
+  ApproachingEma200Result({
+    required this.ema10,
+    required this.ema30,
+    required this.ema48,
+    required this.ema200,
+    required this.pctBelow200,
+    required this.ema200SlopePct,
+    required this.cross30Age,
+    required this.cross48Age,
+    required this.watchlistActive,
+    this.skipReason,
+    required SignalType signal,
+    int signalAge = 0,
+  }) : super(
+          name: resultName,
+          value: pctBelow200,
+          value2: ema200,
+          value3: ema200SlopePct,
+          signal: signal,
+          description: _buildDescription(
+            signal: signal,
+            pctBelow200: pctBelow200,
+            ema200SlopePct: ema200SlopePct,
+            cross30Age: cross30Age,
+            cross48Age: cross48Age,
+            skipReason: skipReason,
+          ),
+          signalAge: signalAge,
+        );
+
+  static String _ageLabel(int age) {
+    if (age == 0) return 'today';
+    if (age == 1) return '1 bar ago';
+    return '$age bars ago';
+  }
+
+  static String _buildDescription({
+    required SignalType signal,
+    required double pctBelow200,
+    required double ema200SlopePct,
+    required int cross30Age,
+    required int cross48Age,
+    String? skipReason,
+  }) {
+    if (skipReason != null) {
+      return 'WATCH skipped: $skipReason';
+    }
+    if (signal == SignalType.watch) {
+      final below = pctBelow200.toStringAsFixed(1);
+      final slope = ema200SlopePct.toStringAsFixed(1);
+      return 'Watchlist · $below% below 200 · 200 slope $slope% · '
+          '10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
+    }
+    return 'Not approaching EMA 200 from below';
   }
 }
 

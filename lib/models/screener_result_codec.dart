@@ -58,6 +58,8 @@ String _sigName(SignalType s) {
       return 'buy';
     case SignalType.sell:
       return 'sell';
+    case SignalType.watch:
+      return 'watch';
     case SignalType.neutral:
       return 'neutral';
   }
@@ -69,6 +71,8 @@ SignalType _parseSignal(String? raw) {
       return SignalType.buy;
     case 'sell':
       return SignalType.sell;
+    case 'watch':
+      return SignalType.watch;
     default:
       return SignalType.neutral;
   }
@@ -129,6 +133,23 @@ Map<String, dynamic> encodeIndicator(IndicatorResult r) {
       'exit': r.exitActive,
       'skip': r.skipReason,
       'st': r.requireSupertrend,
+    };
+  }
+  if (r is ApproachingEma200Result) {
+    return {
+      'k': 'appr200',
+      'sig': sig,
+      'age': age,
+      'e10': r.ema10,
+      'e30': r.ema30,
+      'e48': r.ema48,
+      'e200': r.ema200,
+      'pct': r.pctBelow200,
+      'slope': r.ema200SlopePct,
+      'a30': r.cross30Age,
+      'a48': r.cross48Age,
+      'active': r.watchlistActive,
+      'skip': r.skipReason,
     };
   }
   if (r is EmaResult) {
@@ -229,6 +250,21 @@ IndicatorResult decodeIndicator(Map<String, dynamic> m) {
         exitActive: m['exit'] as bool? ?? sig == SignalType.sell,
         skipReason: m['skip'] as String?,
         requireSupertrend: m['st'] as bool? ?? false,
+        signal: sig,
+        signalAge: age,
+      );
+    case 'appr200':
+      return ApproachingEma200Result(
+        ema10: (m['e10'] as num).toDouble(),
+        ema30: (m['e30'] as num).toDouble(),
+        ema48: (m['e48'] as num).toDouble(),
+        ema200: (m['e200'] as num).toDouble(),
+        pctBelow200: (m['pct'] as num?)?.toDouble() ?? 0,
+        ema200SlopePct: (m['slope'] as num?)?.toDouble() ?? 0,
+        cross30Age: (m['a30'] as num?)?.toInt() ?? 0,
+        cross48Age: (m['a48'] as num?)?.toInt() ?? 0,
+        watchlistActive: m['active'] as bool? ?? sig == SignalType.watch,
+        skipReason: m['skip'] as String?,
         signal: sig,
         signalAge: age,
       );

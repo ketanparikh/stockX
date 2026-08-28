@@ -211,6 +211,8 @@ class StockResultCard extends ConsumerWidget {
       chipColor = AppColors.bullish;
     } else if (indicator.isSell) {
       chipColor = AppColors.bearish;
+    } else if (indicator.isWatch) {
+      chipColor = AppColors.info;
     } else {
       chipColor = AppColors.neutral;
     }

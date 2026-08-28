@@ -98,6 +98,12 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                 sliver: SliverToBoxAdapter(child: _buildEma10CrossFilter(filter)),
               ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _buildApproachingEma200Filter(filter),
+                ),
+              ),
               // RSI Filter
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -1322,7 +1328,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       title: 'EMA 10 Cross',
       icon: Icons.timeline,
       description:
-          'BUY: 10/200 stack · skip illiquid, climax volume, defensive names',
+          'BUY: close > 10 & 200 · skip illiquid, climax volume, defensive names',
       enabled: filter.useEma10Cross,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleEma10Cross(v),
@@ -1409,6 +1415,102 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 .read(screenerFilterProvider.notifier)
                 .updateEma10CrossParams(
                   filter.ema10CrossParams.copyWith(crossLookback: v.toInt()),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApproachingEma200Filter(ScreenerFilter filter) {
+    final p = filter.approachingEma200Params;
+    return FilterSection(
+      title: 'Approaching EMA 200',
+      icon: Icons.visibility_outlined,
+      description:
+          'Watchlist only — 10 crossed 30 & 48, close still under a flattening 200',
+      enabled: filter.useApproachingEma200,
+      onToggle: (v) =>
+          ref.read(screenerFilterProvider.notifier).toggleApproachingEma200(v),
+      child: Column(
+        children: [
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Skip illiquid'),
+            subtitle: const Text(
+              'No WATCH if 20-day rupee ADV is under ₹10 lakh.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: p.skipIlliquid,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateApproachingEma200Params(p.copyWith(skipIlliquid: v)),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Skip climax volume'),
+            subtitle: const Text(
+              'No WATCH if signal-day volume is above 2× the prior 20-day average.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: p.skipClimaxVolume,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateApproachingEma200Params(
+                  p.copyWith(skipClimaxVolume: v),
+                ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Skip defensive names'),
+            subtitle: const Text(
+              'No WATCH on FMCG, paints, insurance, OMCs, defence PSUs, large IT.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: p.skipDefensive,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateApproachingEma200Params(p.copyWith(skipDefensive: v)),
+          ),
+          LabeledSlider(
+            label: 'Max % below EMA 200',
+            value: p.maxPctBelow,
+            min: 4,
+            max: 15,
+            divisions: 11,
+            formatter: (v) => '${v.toStringAsFixed(0)}%',
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateApproachingEma200Params(p.copyWith(maxPctBelow: v)),
+          ),
+          LabeledSlider(
+            label: 'EMA 200 max 20-bar decline',
+            value: -p.minEma200SlopePct,
+            min: 0,
+            max: 5,
+            divisions: 10,
+            formatter: (v) =>
+                v == 0 ? 'flat or rising' : '${v.toStringAsFixed(1)}%',
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateApproachingEma200Params(
+                  p.copyWith(minEma200SlopePct: -v),
+                ),
+          ),
+          LabeledSlider(
+            label: 'Cross completed within',
+            value: p.crossLookback.toDouble(),
+            min: 0,
+            max: 10,
+            divisions: 10,
+            formatter: (v) => v == 0 ? 'today' : '${v.toStringAsFixed(0)} bars',
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateApproachingEma200Params(
+                  p.copyWith(crossLookback: v.toInt()),
                 ),
           ),
         ],

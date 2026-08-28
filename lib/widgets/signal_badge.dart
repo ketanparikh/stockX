@@ -13,6 +13,7 @@ class SignalBadge extends StatelessWidget {
     final (color, label) = switch (signal) {
       SignalType.buy => (AppColors.bullish, 'BUY'),
       SignalType.sell => (AppColors.bearish, 'SELL'),
+      SignalType.watch => (AppColors.info, 'WATCH'),
       SignalType.neutral => (AppColors.neutral, 'NEUTRAL'),
     };
 

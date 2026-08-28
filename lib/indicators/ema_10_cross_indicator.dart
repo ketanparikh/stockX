@@ -6,7 +6,7 @@ import '../utils/constants.dart';
 import 'indicator_utils.dart';
 import 'supertrend_indicator.dart';
 
-/// Entry: close above EMA 10/200, EMA 10 crossed above 30 and 48,
+/// Entry: close above EMA 10 and EMA 200, EMA 10 crossed above 30 and 48,
 ///        Supertrend BUY when [Ema10CrossFilterParams.requireSupertrend],
 ///        and entry gates (liquidity, no climax volume, not defensive).
 /// Exit: EMA 10 crossed below 30 and 48, or Supertrend SELL.
@@ -66,8 +66,8 @@ class Ema10CrossIndicator {
       cross30Age = _barsSinceCrossBelow(ema10, ema30, last) ?? _kHistoryLen;
       cross48Age = _barsSinceCrossBelow(ema10, ema48, last) ?? _kHistoryLen;
     } else {
-      cross30Age = _barsSinceCrossAbove(ema10, ema30, last) ?? _kHistoryLen;
-      cross48Age = _barsSinceCrossAbove(ema10, ema48, last) ?? _kHistoryLen;
+      cross30Age = barsSinceCrossAbove(ema10, ema30, last) ?? _kHistoryLen;
+      cross48Age = barsSinceCrossAbove(ema10, ema48, last) ?? _kHistoryLen;
     }
     final completingAge =
         cross30Age < cross48Age ? cross30Age : cross48Age;
@@ -175,11 +175,11 @@ class Ema10CrossIndicator {
     final e200 = ema200[i];
     if (e10 == null || e30 == null || e48 == null || e200 == null) return false;
 
-    final above10200 = close > e10 && close > e200 && e10 > e200;
-    if (!above10200 || e10 <= e30 || e10 <= e48) return false;
+    final abovePrice = close > e10 && close > e200;
+    if (!abovePrice || e10 <= e30 || e10 <= e48) return false;
 
-    final age30 = _barsSinceCrossAbove(ema10, ema30, i);
-    final age48 = _barsSinceCrossAbove(ema10, ema48, i);
+    final age30 = barsSinceCrossAbove(ema10, ema30, i);
+    final age48 = barsSinceCrossAbove(ema10, ema48, i);
     if (age30 == null || age48 == null) return false;
     final completingAge = age30 < age48 ? age30 : age48;
     return completingAge <= lookback;
@@ -206,7 +206,7 @@ class Ema10CrossIndicator {
   }
 
   /// Bars since EMA [fast] last crossed above [slow], while still above.
-  static int? _barsSinceCrossAbove(
+  static int? barsSinceCrossAbove(
     List<double?> fast,
     List<double?> slow,
     int end,

@@ -3,6 +3,7 @@ import '../indicators/adx_indicator.dart';
 import '../indicators/sethi_indicator.dart';
 import '../indicators/bollinger_bands_indicator.dart';
 import '../indicators/chandelier_exit_indicator.dart';
+import '../indicators/approaching_ema200_indicator.dart';
 import '../indicators/ema_10_cross_indicator.dart';
 import '../indicators/ema_indicator.dart';
 import '../indicators/macd_indicator.dart';
@@ -322,6 +323,22 @@ class ScreenerService {
       if (result != null) indicators.add(result);
     }
 
+    if (filter.useApproachingEma200) {
+      var approachingParams = filter.approachingEma200Params;
+      if (filter.requireFreshSignal &&
+          approachingParams.crossLookback > filter.freshSignalMaxBars) {
+        approachingParams = approachingParams.copyWith(
+          crossLookback: filter.freshSignalMaxBars,
+        );
+      }
+      final result = ApproachingEma200Indicator.calculate(
+        candles,
+        approachingParams,
+        symbol: symbol,
+      );
+      if (result != null) indicators.add(result);
+    }
+
     if (filter.useBollinger) {
       final result = BollingerBandsIndicator.calculate(candles, filter.bollingerParams);
       if (result != null) indicators.add(result);
@@ -360,6 +377,11 @@ class ScreenerService {
         return Ema10CrossIndicator.matchesFilter(
           indicator as Ema10CrossResult,
           filter.ema10CrossParams,
+        );
+      case ApproachingEma200Result.resultName:
+        return ApproachingEma200Indicator.matchesFilter(
+          indicator as ApproachingEma200Result,
+          filter.approachingEma200Params,
         );
       default:
         if (indicator.name.startsWith('EMA')) {
@@ -546,6 +568,8 @@ class ScreenerService {
         return filter.useSethi;
       case Ema10CrossResult.resultName:
         return filter.useEma10Cross;
+      case ApproachingEma200Result.resultName:
+        return filter.useApproachingEma200;
       default:
         if (name.startsWith('EMA')) return filter.useEma;
         return false;
@@ -578,8 +602,20 @@ class ScreenerService {
         if (p.skipDefensive) gates.add('no defensive');
         final st = p.requireSupertrend ? ' + ST BUY' : '';
         final extra = gates.isEmpty ? '' : ' · ${gates.join(' · ')}';
-        return 'EMA 10 Cross — BUY 10/200$st$extra · '
+        return 'EMA 10 Cross — BUY close > 10 & 200$st$extra · '
             'SELL ${p.requireSupertrend ? 'ST SELL or ' : ''}10 below 30 & 48 '
+            '(≤${p.crossLookback} bars)';
+      case ApproachingEma200Result.resultName:
+        final p = filter.approachingEma200Params;
+        final gates = <String>[];
+        if (p.skipIlliquid) gates.add('ADV ≥ ₹10L');
+        if (p.skipClimaxVolume) {
+          gates.add('vol ≤ ${p.maxVolumeMultiplier.toStringAsFixed(1)}×');
+        }
+        if (p.skipDefensive) gates.add('no defensive');
+        final extra = gates.isEmpty ? '' : ' · ${gates.join(' · ')}';
+        return 'Approaching EMA 200 — WATCH 10×30 & 10×48, '
+            'close 0–${p.maxPctBelow.toStringAsFixed(0)}% below flattening 200$extra '
             '(≤${p.crossLookback} bars)';
       default:
         if (name.startsWith('EMA')) {
@@ -617,6 +653,13 @@ class ScreenerService {
       symbol: symbol,
     );
     if (ema10 != null) indicators.add(ema10);
+
+    final approaching = ApproachingEma200Indicator.calculate(
+      candles,
+      const ApproachingEma200FilterParams(),
+      symbol: symbol,
+    );
+    if (approaching != null) indicators.add(approaching);
 
     final bollinger = BollingerBandsIndicator.calculate(candles, const BollingerFilterParams());
     if (bollinger != null) indicators.add(bollinger);
