@@ -2,9 +2,14 @@
 # 1. Go to https://supabase.com → sign in → your project
 # 2. Settings (gear icon) → API
 # 3. Copy "Project URL" and "anon / public" key below
+# GitHub Actions may override these via SUPABASE_URL / SUPABASE_ANON_KEY secrets.
 
-SUPABASE_URL = "https://cwwrjhjzrgrhkcgvxbof.supabase.co"
-SUPABASE_ANON_KEY = "sb_publishable_qSkk1HaV4vOantlzM79wmQ_g_U6y5hi"
+import os
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL") or "https://cwwrjhjzrgrhkcgvxbof.supabase.co"
+SUPABASE_ANON_KEY = (
+    os.environ.get("SUPABASE_ANON_KEY") or "sb_publishable_qSkk1HaV4vOantlzM79wmQ_g_U6y5hi"
+)
 
 # ── Fetch settings ────────────────────────────────────────────────────────────
 # How far back to pull candles for each timeframe.
