@@ -35,7 +35,7 @@ import argparse
 import sys
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 import yfinance as yf
@@ -401,23 +401,22 @@ def _extract_ohlcv(df: pd.DataFrame) -> pd.DataFrame | None:
     """Normalize a DataFrame to flat Open/High/Low/Close/Volume columns.
     Handles both flat columns and MultiIndex columns from newer yfinance versions."""
     try:
-        # If columns are MultiIndex, drop the ticker level to get flat field names
-        if isinstance(df.columns, pd.MultiIndex):
-            df = df.droplevel(1, axis=1) if df.columns.nlevels == 2 else df
-        # Normalize to title-case so 'open' and 'Open' both work
-        df.columns = [c.title() if isinstance(c, str) else c for c in df.columns]
-        return df[["Open", "High", "Low", "Close", "Volume"]]
+        ohlcv = {"open", "high", "low", "close", "adj close", "volume"}
+        if isinstance(df.columns, pd.MultiIndex) and df.columns.nlevels >= 2:
+            lvl0 = [str(c).lower() for c in df.columns.get_level_values(0)]
+            # (Price, Ticker) vs (Ticker, Price) — keep the OHLCV level.
+            if any(c in ohlcv for c in lvl0):
+                df = df.droplevel(1, axis=1)
+            else:
+                df = df.droplevel(0, axis=1)
+        df.columns = [c.title() if isinstance(c, str) else str(c).title() for c in df.columns]
+        df = df.loc[:, ~df.columns.duplicated()]
+        return df[["Open", "High", "Low", "Close", "Volume"]].copy()
     except Exception:
         return None
 
 
-def fetch_batch(yahoo_symbols: list[str], timeframe: str, period: str) -> dict[str, pd.DataFrame]:
-    """
-    Download OHLCV data for multiple tickers in ONE HTTP request via yf.download().
-    Returns a dict of {yahoo_symbol: DataFrame}, omitting symbols with insufficient data.
-    """
-    if not yahoo_symbols:
-        return {}
+def _download_once(yahoo_symbols: list[str], timeframe: str, period: str) -> pd.DataFrame | None:
     try:
         raw = yf.download(
             tickers=yahoo_symbols,
@@ -429,10 +428,38 @@ def fetch_batch(yahoo_symbols: list[str], timeframe: str, period: str) -> dict[s
             threads=True,
             progress=False,
         )
-    except Exception:
+    except Exception as e:
+        print(f"\n  [WARN] yfinance download failed: {e}", flush=True)
+        return None
+    if raw is None or raw.empty:
+        return None
+    return raw
+
+
+def fetch_batch(
+    yahoo_symbols: list[str],
+    timeframe: str,
+    period: str,
+    retries: int = 2,
+) -> dict[str, pd.DataFrame]:
+    """
+    Download OHLCV data for multiple tickers in ONE HTTP request via yf.download().
+    Returns a dict of {yahoo_symbol: DataFrame}, omitting symbols with insufficient data.
+    """
+    if not yahoo_symbols:
         return {}
 
+    raw = None
+    for attempt in range(retries + 1):
+        raw = _download_once(yahoo_symbols, timeframe, period)
+        if raw is not None:
+            break
+        if attempt < retries:
+            time.sleep(2 ** attempt)
+
     result: dict[str, pd.DataFrame] = {}
+    if raw is None:
+        return result
 
     # Single ticker: yf.download may return flat or MultiIndex columns
     if len(yahoo_symbols) == 1:
@@ -474,17 +501,13 @@ def df_to_row(symbol: str, timeframe: str, df: pd.DataFrame) -> dict:
 
 
 def upsert_batch(client: Client, rows: list[dict]) -> int:
-    """Upsert a batch of rows. Returns the number successfully written."""
+    """Upsert a batch of rows. Raises on failure so CI cannot report a false success."""
     if not rows:
         return 0
-    try:
-        client.table("stock_candles").upsert(
-            rows, on_conflict="symbol,timeframe"
-        ).execute()
-        return len(rows)
-    except Exception as e:
-        print(f"\n  [WARN] Supabase upsert failed: {e}")
-        return 0
+    client.table("stock_candles").upsert(
+        rows, on_conflict="symbol,timeframe"
+    ).execute()
+    return len(rows)
 
 
 def fetch_existing_symbols(client: Client, timeframe: str) -> set[str]:
@@ -550,7 +573,9 @@ def main():
     total       = len(symbols)
     success     = 0
     failed      = 0
+    upserted    = 0
     upsert_rows = []
+    newest_bar  = None
 
     with tqdm(total=total, unit="sym", dynamic_ncols=True) as pbar:
         for i in range(0, total, args.batch_size):
@@ -567,6 +592,9 @@ def main():
                     record_failure(sym)
                 else:
                     record_success(sym)
+                    end = df.index.max()
+                    if newest_bar is None or end > newest_bar:
+                        newest_bar = end
                     if not args.dry_run:
                         upsert_rows.append(df_to_row(sym, args.timeframe, df))
                     success += 1
@@ -576,24 +604,37 @@ def main():
 
             # Flush accumulated rows to Supabase after each batch
             if upsert_rows and not args.dry_run:
-                upsert_batch(client, upsert_rows)
+                written = upsert_batch(client, upsert_rows)
+                upserted += written
                 upsert_rows.clear()
 
             # Brief pause between batches to avoid rate-limiting
             if i + args.batch_size < total:
                 time.sleep(args.delay)
 
+    newest_s = newest_bar.strftime("%Y-%m-%d") if newest_bar is not None else "none"
     # ── Summary ───────────────────────────────────────────────────────────────
     print("\n" + "=" * 60)
     print(f"  Done at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Fetched  : {success} / {total}")
     print(f"  Failed   : {failed}  (no data or < {config.MIN_BARS} bars)")
+    print(f"  Newest bar: {newest_s}")
     print(f"  Registry : {registry_summary().replace(chr(10), ' | ')}")
     if args.dry_run:
         print("  Supabase : SKIPPED (dry-run mode)")
     else:
-        print(f"  Supabase : rows upserted successfully")
+        print(f"  Supabase : {upserted} rows upserted")
     print("=" * 60)
+
+    cutoff = datetime.now(timezone.utc).date() - timedelta(days=5)
+    stale = newest_bar is None or newest_bar.date() < cutoff
+    if not args.dry_run and (upserted == 0 or success == 0 or stale):
+        print(
+            f"ERROR: fetch did not refresh candles "
+            f"(upserted={upserted}, fetched={success}, newest={newest_s}, cutoff={cutoff}).",
+            flush=True,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
