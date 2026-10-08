@@ -49,18 +49,23 @@ class ResultsScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: _buildBody(context, state, c),
+      body: _buildBody(context, ref, state, c),
     );
   }
 
-  Widget _buildBody(BuildContext context, ScreenerState state, AppSurfaces c) {
+  Widget _buildBody(
+    BuildContext context,
+    WidgetRef ref,
+    ScreenerState state,
+    AppSurfaces c,
+  ) {
     switch (state.status) {
       case ScreenerStatus.running:
         return _buildProgress(state, c);
       case ScreenerStatus.success:
         return state.results.isEmpty
             ? _buildEmpty(c)
-            : _buildResults(context, state.results, c);
+            : _buildResults(context, ref, state.results, c);
       case ScreenerStatus.error:
         return _buildError(state.errorMessage, c);
       case ScreenerStatus.idle:
@@ -119,7 +124,16 @@ class ResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildResults(BuildContext context, List<ScreenerResult> results, AppSurfaces c) {
+  Widget _buildResults(
+    BuildContext context,
+    WidgetRef ref,
+    List<ScreenerResult> results,
+    AppSurfaces c,
+  ) {
+    final filter = ref.watch(screenerFilterProvider);
+    final sortLabel = filter.useEma10Cross
+        ? 'BUY farthest above EMA 200 first · top ${filter.ema10CrossParams.highlightTopN} highlighted'
+        : 'Sorted by match score';
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -129,7 +143,12 @@ class ResultsScreen extends ConsumerWidget {
               children: [
                 Icon(Icons.filter_list, color: c.textMuted, size: 16),
                 const SizedBox(width: 6),
-                Text('Sorted by match score', style: TextStyle(color: c.textMuted, fontSize: 12)),
+                Expanded(
+                  child: Text(
+                    sortLabel,
+                    style: TextStyle(color: c.textMuted, fontSize: 12),
+                  ),
+                ),
               ],
             ),
           ),

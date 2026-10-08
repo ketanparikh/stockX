@@ -50,6 +50,13 @@ class Ema10EntryGates {
       return 'defensive (FMCG / ins / OMC / defence / large IT)';
     }
 
+    if (params.applyPriceBand) {
+      final px = candles[i].close;
+      if (px < params.minPrice || px > params.maxPrice) {
+        return 'price outside ₹${params.minPrice.toStringAsFixed(0)}–${params.maxPrice.toStringAsFixed(0)}';
+      }
+    }
+
     if (!params.skipIlliquid && !params.skipClimaxVolume) return null;
 
     final lb = params.volumeLookback;

@@ -42,12 +42,16 @@ class ScreenerResult {
   final int matchingFilters;
   final int totalFilters;
 
+  /// 1-based rank among EMA 10 Cross BUYs farthest above EMA 200, else null.
+  final int? priorityRank;
+
   const ScreenerResult({
     required this.quote,
     required this.candles,
     required this.indicators,
     required this.matchingFilters,
     required this.totalFilters,
+    this.priorityRank,
   });
 
   bool get allFiltersMatch => matchingFilters == totalFilters;

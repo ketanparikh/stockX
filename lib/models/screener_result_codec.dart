@@ -133,6 +133,7 @@ Map<String, dynamic> encodeIndicator(IndicatorResult r) {
       'exit': r.exitActive,
       'skip': r.skipReason,
       'st': r.requireSupertrend,
+      'vs200': r.pctAbove200,
     };
   }
   if (r is ApproachingEma200Result) {
@@ -250,6 +251,7 @@ IndicatorResult decodeIndicator(Map<String, dynamic> m) {
         exitActive: m['exit'] as bool? ?? sig == SignalType.sell,
         skipReason: m['skip'] as String?,
         requireSupertrend: m['st'] as bool? ?? false,
+        pctAbove200: (m['vs200'] as num?)?.toDouble() ?? 0,
         signal: sig,
         signalAge: age,
       );

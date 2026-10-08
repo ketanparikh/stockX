@@ -25,6 +25,7 @@ const _stackOnly = Ema10CrossFilterParams(
   skipIlliquid: false,
   skipClimaxVolume: false,
   skipDefensive: false,
+  applyPriceBand: false,
   crossLookback: 5,
 );
 
@@ -290,5 +291,53 @@ void main() {
     );
     expect(result!.exitActive, isTrue);
     expect(result.signal, SignalType.sell);
+  });
+
+  test('close below min price skips BUY', () {
+    final result = Ema10CrossIndicator.calculate(
+      _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
+      const Ema10CrossFilterParams(
+        requireSupertrend: false,
+        skipIlliquid: false,
+        skipClimaxVolume: false,
+        skipDefensive: false,
+        minPrice: 200,
+        maxPrice: 1500,
+      ),
+    );
+    expect(result!.setupActive, isFalse);
+    expect(result.signal, SignalType.neutral);
+    expect(result.skipReason, contains('price outside'));
+  });
+
+  test('close above max price skips BUY', () {
+    final result = Ema10CrossIndicator.calculate(
+      _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
+      const Ema10CrossFilterParams(
+        requireSupertrend: false,
+        skipIlliquid: false,
+        skipClimaxVolume: false,
+        skipDefensive: false,
+        minPrice: 10,
+        maxPrice: 100,
+      ),
+    );
+    expect(result!.setupActive, isFalse);
+    expect(result.skipReason, contains('price outside'));
+  });
+
+  test('close inside ₹100–1,500 still fires BUY', () {
+    final result = Ema10CrossIndicator.calculate(
+      _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
+      const Ema10CrossFilterParams(
+        requireSupertrend: false,
+        skipIlliquid: false,
+        skipClimaxVolume: false,
+        skipDefensive: false,
+      ),
+    );
+    expect(result!.setupActive, isTrue);
+    expect(result.signal, SignalType.buy);
+    expect(result.pctAbove200, greaterThan(0));
   });
 }

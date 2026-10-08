@@ -17,6 +17,7 @@ import '../models/screener_result.dart';
 import '../models/screener_result_codec.dart';
 import '../utils/candle_series.dart';
 import '../utils/constants.dart';
+import '../utils/ema10_cross_ranker.dart';
 import '../utils/screener_filter_fingerprint.dart';
 import '../utils/stock_symbols.dart';
 import 'cache_service.dart';
@@ -82,7 +83,10 @@ class ScreenerService {
             final kept = cached.where((r) => _passesFilter(r, filter)).toList();
             if (kept.isNotEmpty) {
               onProgress?.call(stocksToScreen.length, stocksToScreen.length);
-              return _applyMaxResults(kept, filter.maxResults);
+              return _applyMaxResults(
+                _rankEma10Cross(kept, filter),
+                filter.maxResults,
+              );
             }
           }
         }
@@ -135,7 +139,10 @@ class ScreenerService {
     }
 
     results.sort((a, b) => b.matchScore.compareTo(a.matchScore));
-    final finalResults = _applyMaxResults(results, filter.maxResults);
+    final finalResults = _applyMaxResults(
+      _rankEma10Cross(results, filter),
+      filter.maxResults,
+    );
 
     if (filterCacheHash != null && finalResults.isNotEmpty) {
       _supabase
@@ -158,6 +165,17 @@ class ScreenerService {
   List<ScreenerResult> _applyMaxResults(List<ScreenerResult> rows, int cap) {
     if (cap > 0 && rows.length > cap) return rows.sublist(0, cap);
     return rows;
+  }
+
+  List<ScreenerResult> _rankEma10Cross(
+    List<ScreenerResult> rows,
+    ScreenerFilter filter,
+  ) {
+    return Ema10CrossRanker.rank(
+      rows,
+      enabled: filter.useEma10Cross,
+      topN: filter.ema10CrossParams.highlightTopN,
+    );
   }
 
   List<StockSymbol> _getStocksToScreen(ScreenerFilter filter) {
@@ -600,6 +618,11 @@ class ScreenerService {
           gates.add('vol ≤ ${p.maxVolumeMultiplier.toStringAsFixed(1)}×');
         }
         if (p.skipDefensive) gates.add('no defensive');
+        if (p.applyPriceBand) {
+          gates.add(
+            '₹${p.minPrice.toStringAsFixed(0)}–${p.maxPrice.toStringAsFixed(0)}',
+          );
+        }
         final st = p.requireSupertrend ? ' + ST BUY' : '';
         final extra = gates.isEmpty ? '' : ' · ${gates.join(' · ')}';
         return 'EMA 10 Cross — BUY close > 10 & 200$st$extra · '

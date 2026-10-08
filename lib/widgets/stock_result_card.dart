@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/indicator_result.dart';
 import '../models/screener_result.dart';
 import '../providers/watchlist_provider.dart';
 import '../theme/app_colors.dart';
@@ -21,6 +22,10 @@ class StockResultCard extends ConsumerWidget {
     final quote = result.quote;
     final isWatched = ref.watch(watchlistProvider).contains(quote.symbol);
     final isPositive = quote.isPositive;
+    final rank = result.priorityRank;
+    final highlighted = rank != null;
+    final ema10 = result.getIndicator(Ema10CrossResult.resultName);
+    final vs200 = ema10 is Ema10CrossResult ? ema10.pctAbove200 : null;
 
     return GestureDetector(
       onTap: onTap,
@@ -29,7 +34,10 @@ class StockResultCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: c.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: c.border),
+          border: Border.all(
+            color: highlighted ? AppColors.bullish : c.border,
+            width: highlighted ? 1.5 : 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,6 +77,24 @@ class StockResultCard extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                            if (highlighted) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bullish.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'TOP $rank',
+                                  style: const TextStyle(
+                                    color: AppColors.bullish,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -80,6 +106,17 @@ class StockResultCard extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(quote.sector, style: TextStyle(color: c.textMuted, fontSize: 11)),
+                        if (vs200 != null && ema10 is Ema10CrossResult && ema10.isBuy) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            '${vs200 >= 0 ? '+' : ''}${vs200.toStringAsFixed(1)}% vs EMA 200',
+                            style: TextStyle(
+                              color: highlighted ? AppColors.bullish : c.textSecondary,
+                              fontSize: 11,
+                              fontWeight: highlighted ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

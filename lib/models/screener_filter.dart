@@ -53,7 +53,7 @@ extension IndicatorTypeExt on IndicatorType {
       case IndicatorType.emaCrossover:
         return 'Fast and slow EMA crossover signals';
       case IndicatorType.ema10Cross:
-        return 'Close above EMA 10 and 200, 10 crossed 30 & 48; skip illiquid, climax volume, and defensive names';
+        return 'Close above EMA 10 and 200, 10 crossed 30 & 48; ₹100–1,500; skip illiquid, climax, defensive; top 5 by % above 200';
       case IndicatorType.approachingEma200:
         return 'Watchlist: 10 crossed 30 & 48, close 0–8% below a flattening EMA 200. Do not buy until close reclaims 200';
       case IndicatorType.bollingerBands:
@@ -243,6 +243,14 @@ class Ema10CrossFilterParams {
   /// Skip BUY on FMCG, insurance, OMCs, defence PSUs, and large IT.
   final bool skipDefensive;
 
+  /// Skip BUY when close is outside [minPrice]–[maxPrice].
+  final bool applyPriceBand;
+  final double minPrice;
+  final double maxPrice;
+
+  /// After a scan, highlight this many BUYs farthest above EMA 200.
+  final int highlightTopN;
+
   final String signal;
 
   const Ema10CrossFilterParams({
@@ -258,6 +266,10 @@ class Ema10CrossFilterParams {
     this.skipClimaxVolume = true,
     this.maxVolumeMultiplier = AppConstants.defaultEma10MaxVolumeMultiplier,
     this.skipDefensive = true,
+    this.applyPriceBand = true,
+    this.minPrice = AppConstants.defaultEma10MinPrice,
+    this.maxPrice = AppConstants.defaultEma10MaxPrice,
+    this.highlightTopN = AppConstants.defaultEma10HighlightTopN,
     this.signal = FilterSignal.buy,
   });
 
@@ -274,6 +286,10 @@ class Ema10CrossFilterParams {
     bool? skipClimaxVolume,
     double? maxVolumeMultiplier,
     bool? skipDefensive,
+    bool? applyPriceBand,
+    double? minPrice,
+    double? maxPrice,
+    int? highlightTopN,
     String? signal,
   }) =>
       Ema10CrossFilterParams(
@@ -289,6 +305,10 @@ class Ema10CrossFilterParams {
         skipClimaxVolume: skipClimaxVolume ?? this.skipClimaxVolume,
         maxVolumeMultiplier: maxVolumeMultiplier ?? this.maxVolumeMultiplier,
         skipDefensive: skipDefensive ?? this.skipDefensive,
+        applyPriceBand: applyPriceBand ?? this.applyPriceBand,
+        minPrice: minPrice ?? this.minPrice,
+        maxPrice: maxPrice ?? this.maxPrice,
+        highlightTopN: highlightTopN ?? this.highlightTopN,
         signal: signal ?? this.signal,
       );
 }
@@ -344,6 +364,7 @@ class ApproachingEma200FilterParams {
         skipClimaxVolume: skipClimaxVolume,
         maxVolumeMultiplier: maxVolumeMultiplier,
         skipDefensive: skipDefensive,
+        applyPriceBand: false,
       );
 
   ApproachingEma200FilterParams copyWith({

@@ -1328,7 +1328,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       title: 'EMA 10 Cross',
       icon: Icons.timeline,
       description:
-          'BUY: close > 10 & 200 · skip illiquid, climax volume, defensive names',
+          'BUY: close > 10 & 200 · ₹100–1,500 · skip illiquid/climax/defensive · top 5 vs EMA 200',
       enabled: filter.useEma10Cross,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleEma10Cross(v),
@@ -1387,6 +1387,62 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 .read(screenerFilterProvider.notifier)
                 .updateEma10CrossParams(
                   filter.ema10CrossParams.copyWith(skipDefensive: v),
+                ),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: const Text('Price band'),
+            subtitle: const Text(
+              'No BUY if last close is under ₹100 or over ₹1,500.',
+              style: TextStyle(fontSize: 11),
+            ),
+            value: filter.ema10CrossParams.applyPriceBand,
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(applyPriceBand: v),
+                ),
+          ),
+          if (filter.ema10CrossParams.applyPriceBand) ...[
+            LabeledSlider(
+              label: 'Min close',
+              value: filter.ema10CrossParams.minPrice.clamp(10, 500).toDouble(),
+              min: 10,
+              max: 500,
+              divisions: 49,
+              formatter: (v) => '₹${v.toStringAsFixed(0)}',
+              onChanged: (v) => ref
+                  .read(screenerFilterProvider.notifier)
+                  .updateEma10CrossParams(
+                    filter.ema10CrossParams.copyWith(minPrice: v),
+                  ),
+            ),
+            LabeledSlider(
+              label: 'Max close',
+              value: filter.ema10CrossParams.maxPrice.clamp(500, 5000).toDouble(),
+              min: 500,
+              max: 5000,
+              divisions: 45,
+              formatter: (v) => '₹${v.toStringAsFixed(0)}',
+              onChanged: (v) => ref
+                  .read(screenerFilterProvider.notifier)
+                  .updateEma10CrossParams(
+                    filter.ema10CrossParams.copyWith(maxPrice: v),
+                  ),
+            ),
+          ],
+          LabeledSlider(
+            label: 'Highlight top N farthest above EMA 200',
+            value: filter.ema10CrossParams.highlightTopN.toDouble().clamp(1, 10).toDouble(),
+            min: 1,
+            max: 10,
+            divisions: 9,
+            formatter: (v) => v.toStringAsFixed(0),
+            onChanged: (v) => ref
+                .read(screenerFilterProvider.notifier)
+                .updateEma10CrossParams(
+                  filter.ema10CrossParams.copyWith(highlightTopN: v.toInt()),
                 ),
           ),
           SwitchListTile(

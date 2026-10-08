@@ -48,6 +48,11 @@ class AppConstants {
   static const double defaultEma10MinAdvInr = 1000000.0;
   /// Skip BUY when signal-day volume exceeds this multiple of the prior 20D avg.
   static const double defaultEma10MaxVolumeMultiplier = 2.0;
+  /// Skip BUY outside this close range (2y book: sub-₹100 and ₹1,500+ lose).
+  static const double defaultEma10MinPrice = 100.0;
+  static const double defaultEma10MaxPrice = 1500.0;
+  /// Highlight this many EMA 10 Cross BUYs, farthest above EMA 200 first.
+  static const int defaultEma10HighlightTopN = 5;
 
   /// Approaching EMA 200 watchlist: 10/30/48 cross while close is still
   /// within this percent *below* a flattening EMA 200. Do not buy yet.

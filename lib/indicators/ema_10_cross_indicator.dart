@@ -88,6 +88,8 @@ class Ema10CrossIndicator {
       }
     }
 
+    final pctAbove200 = e200 > 0 ? (closes[last] / e200 - 1.0) * 100.0 : 0.0;
+
     return Ema10CrossResult(
       ema10: e10,
       ema30: e30,
@@ -99,6 +101,7 @@ class Ema10CrossIndicator {
       exitActive: exitActive,
       skipReason: skipReason,
       requireSupertrend: params.requireSupertrend,
+      pctAbove200: pctAbove200,
       signal: signal,
       signalAge: age,
     );
