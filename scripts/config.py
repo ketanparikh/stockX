@@ -14,9 +14,9 @@ SUPABASE_ANON_KEY = (
 # ── Fetch settings ────────────────────────────────────────────────────────────
 # How far back to pull candles for each timeframe.
 FETCH_RANGE = {
-    "1d":  "2y",   # ~500 daily bars (Sethi / 200 DMA needs 201+)
-    "1wk": "2y",   # ~104 weekly bars
-    "1mo": "5y",   # ~60  monthly bars
+    "1d":  "2y",    # ~500 daily bars (Sethi / 200 DMA needs 201+)
+    "1wk": "10y",   # ~520 weekly bars (EMA 200 needs 200 weeks)
+    "1mo": "5y",    # ~60  monthly bars
 }
 
 # Number of symbols fetched concurrently per batch.
@@ -27,5 +27,23 @@ BATCH_SIZE = 25
 BATCH_DELAY = 1.5
 
 # Minimum candle bars needed before a row is written to Supabase.
-# Sethi indicator needs 201+ daily bars for 200 DMA.
+# Daily/weekly EMA 200 and Sethi 200 DMA need 201+ bars.
 MIN_BARS = 201
+MIN_BARS_BY_TF = {
+    "1d": 201,
+    "1wk": 201,
+    "1mo": 50,
+}
+STALE_DAYS_BY_TF = {
+    "1d": 5,
+    "1wk": 10,
+    "1mo": 40,
+}
+
+
+def min_bars(timeframe: str) -> int:
+    return MIN_BARS_BY_TF.get(timeframe, MIN_BARS)
+
+
+def stale_days(timeframe: str) -> int:
+    return STALE_DAYS_BY_TF.get(timeframe, 5)

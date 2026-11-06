@@ -465,7 +465,7 @@ def fetch_batch(
     if len(yahoo_symbols) == 1:
         sym = yahoo_symbols[0]
         df = _extract_ohlcv(raw.dropna(how="all"))
-        if df is not None and len(df) >= config.MIN_BARS:
+        if df is not None and len(df) >= config.min_bars(timeframe):
             df.index = pd.to_datetime(df.index, utc=True)
             result[sym] = df
         return result
@@ -475,7 +475,7 @@ def fetch_batch(
         try:
             ticker_df = raw[sym].dropna(how="all")
             df = _extract_ohlcv(ticker_df)
-            if df is not None and len(df) >= config.MIN_BARS:
+            if df is not None and len(df) >= config.min_bars(timeframe):
                 df.index = pd.to_datetime(df.index, utc=True)
                 result[sym] = df
         except (KeyError, Exception):
@@ -617,7 +617,7 @@ def main():
     print("\n" + "=" * 60)
     print(f"  Done at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"  Fetched  : {success} / {total}")
-    print(f"  Failed   : {failed}  (no data or < {config.MIN_BARS} bars)")
+    print(f"  Failed   : {failed}  (no data or < {config.min_bars(args.timeframe)} bars)")
     print(f"  Newest bar: {newest_s}")
     print(f"  Registry : {registry_summary().replace(chr(10), ' | ')}")
     if args.dry_run:
@@ -626,7 +626,9 @@ def main():
         print(f"  Supabase : {upserted} rows upserted")
     print("=" * 60)
 
-    cutoff = datetime.now(timezone.utc).date() - timedelta(days=5)
+    cutoff = datetime.now(timezone.utc).date() - timedelta(
+        days=config.stale_days(args.timeframe)
+    )
     stale = newest_bar is None or newest_bar.date() < cutoff
     if not args.dry_run and (upserted == 0 or success == 0 or stale):
         print(

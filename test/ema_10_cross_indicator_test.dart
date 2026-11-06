@@ -214,7 +214,7 @@ void main() {
     expect(loose.signal, SignalType.sell);
   });
 
-  test('illiquid 20D ADV skips BUY', () {
+  test('illiquid 20-bar ADV skips BUY', () {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 1000),
       const Ema10CrossFilterParams(

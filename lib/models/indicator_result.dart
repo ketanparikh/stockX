@@ -202,9 +202,9 @@ class Ema10CrossResult extends IndicatorResult {
         );
 
   static String _ageLabel(int age) {
-    if (age == 0) return 'today';
-    if (age == 1) return '1 bar ago';
-    return '$age bars ago';
+    if (age == 0) return 'this week';
+    if (age == 1) return '1 week ago';
+    return '$age weeks ago';
   }
 
   static String _buildDescription({
@@ -278,9 +278,9 @@ class ApproachingEma200Result extends IndicatorResult {
         );
 
   static String _ageLabel(int age) {
-    if (age == 0) return 'today';
-    if (age == 1) return '1 bar ago';
-    return '$age bars ago';
+    if (age == 0) return 'this week';
+    if (age == 1) return '1 week ago';
+    return '$age weeks ago';
   }
 
   static String _buildDescription({

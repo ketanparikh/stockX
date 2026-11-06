@@ -45,16 +45,17 @@ class ScreenerService {
     // Get stocks to screen
     final stocksToScreen = _getStocksToScreen(filter);
     if (stocksToScreen.isEmpty) return [];
+    final timeframe = filter.resolvedTimeframe;
 
     // Bulk-load candles from Supabase into the session cache (few HTTP calls).
     // Avoids thousands of per-stock Yahoo requests when data was pre-filled
     // by fetch_nse_data.py / in-app sync.
     if (_supabase.isAvailable) {
       final symbols = stocksToScreen.map((s) => s.symbol).toList();
-      final fromCloud = await _supabase.readBatch(symbols, filter.timeframe);
+      final fromCloud = await _supabase.readBatch(symbols, timeframe);
       for (final entry in fromCloud.entries) {
         if (entry.value.length >= 2) {
-          _cache.store(entry.key, filter.timeframe, entry.value);
+          _cache.store(entry.key, timeframe, entry.value);
         }
       }
     }
@@ -66,7 +67,7 @@ class ScreenerService {
 
     if (filterCacheHash != null) {
       final row =
-          await _supabase.readScreenerFilterCache(filterCacheHash, filter.timeframe);
+          await _supabase.readScreenerFilterCache(filterCacheHash, timeframe);
       if (row != null) {
         final builtAt = _parseUtc(row['built_at']);
         final payloadRaw = row['payload'];
@@ -77,7 +78,7 @@ class ScreenerService {
           final payload = Map<String, dynamic>.from(payloadRaw);
           final cached = decodeScreenerResultsPayload(
             payload,
-            (sym) => _cache.get(sym, filter.timeframe) ?? const [],
+            (sym) => _cache.get(sym, timeframe) ?? const [],
           );
           if (cached.isNotEmpty) {
             final kept = cached.where((r) => _passesFilter(r, filter)).toList();
@@ -95,7 +96,7 @@ class ScreenerService {
 
     // After a warm cache, use higher concurrency and shorter pauses so the
     // screener is CPU-bound instead of waiting on artificial throttling.
-    final cacheRatio = _cacheCoverageRatio(stocksToScreen, filter.timeframe);
+    final cacheRatio = _cacheCoverageRatio(stocksToScreen, timeframe);
     final batchSize = cacheRatio >= 0.85
         ? 40
         : cacheRatio >= 0.5
@@ -148,7 +149,7 @@ class ScreenerService {
       _supabase
           .writeScreenerFilterCache(
             filterCacheHash,
-            filter.timeframe,
+            timeframe,
             encodeScreenerResultsPayload(finalResults),
           )
           .ignore();
@@ -233,12 +234,13 @@ class ScreenerService {
   }) async {
     try {
       // Cache-first: skip the network call if we already have candle data.
+      final timeframe = filter.resolvedTimeframe;
       List<CandleData> candles =
-          _cache.get(stock.symbol, filter.timeframe) ?? [];
+          _cache.get(stock.symbol, timeframe) ?? [];
 
       if (candles.length < 2) {
         // Cache miss — fetch live and populate the cache for future runs.
-        final fetched = await _syncService.fetchAndCache(stock, filter.timeframe);
+        final fetched = await _syncService.fetchAndCache(stock, timeframe);
         if (fetched == null || fetched.length < 2) return null;
         candles = fetched;
       }
@@ -247,7 +249,7 @@ class ScreenerService {
       if (candles.length < 2) return null;
 
       if (filter.requireFreshSignal &&
-          !CandleSeries.isCurrent(candles, filter.timeframe)) {
+          !CandleSeries.isCurrent(candles, timeframe)) {
         return null;
       }
 
@@ -421,7 +423,7 @@ class ScreenerService {
       if (!signalOk) return false;
 
       if (filter.requireFreshSignal) {
-        if (!CandleSeries.isCurrent(result.candles, filter.timeframe)) {
+        if (!CandleSeries.isCurrent(result.candles, filter.resolvedTimeframe)) {
           return false;
         }
         final matchingIndicators = result.indicators

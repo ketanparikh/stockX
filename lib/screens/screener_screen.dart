@@ -225,6 +225,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       (Timeframe.weekly, 'Weekly'),
       (Timeframe.monthly, 'Monthly'),
     ];
+    final pinnedWeekly = filter.pinsWeeklyEmaStack;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -232,12 +233,17 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
         const SizedBox(height: 6),
         Row(
           children: timeframes.map(((String, String) tf) {
-            final selected = filter.timeframe == tf.$1;
+            final selected = filter.resolvedTimeframe == tf.$1;
+            final locked = pinnedWeekly && tf.$1 != Timeframe.weekly;
             return Expanded(
               child: GestureDetector(
-                onTap: () {
-                  ref.read(screenerFilterProvider.notifier).setTimeframe(tf.$1);
-                },
+                onTap: locked
+                    ? null
+                    : () {
+                        ref
+                            .read(screenerFilterProvider.notifier)
+                            .setTimeframe(tf.$1);
+                      },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -248,7 +254,9 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                         : context.appColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: selected ? AppColors.accent : context.appColors.border,
+                      color: selected
+                          ? AppColors.accent
+                          : context.appColors.border,
                       width: selected ? 1.5 : 1,
                     ),
                   ),
@@ -256,8 +264,13 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                     tf.$2,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: selected ? AppColors.accent : context.appColors.textSecondary,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                      color: locked
+                          ? context.appColors.textMuted
+                          : selected
+                              ? AppColors.accent
+                              : context.appColors.textSecondary,
+                      fontWeight:
+                          selected ? FontWeight.w700 : FontWeight.w400,
                       fontSize: 14,
                     ),
                   ),
@@ -266,6 +279,16 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             );
           }).toList(),
         ),
+        if (pinnedWeekly) ...[
+          const SizedBox(height: 8),
+          Text(
+            'EMA 10 Cross and Approaching EMA 200 always use weekly closes.',
+            style: TextStyle(
+              color: context.appColors.textMuted,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1328,7 +1351,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       title: 'EMA 10 Cross',
       icon: Icons.timeline,
       description:
-          'BUY: close > 10 & 200 · ₹100–1,500 · skip illiquid/climax/defensive · top 5 vs EMA 200',
+          'Weekly closes · BUY: close > 10 & 200 · ₹100–1,500 · skip illiquid/climax/defensive · top 5 vs EMA 200',
       enabled: filter.useEma10Cross,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleEma10Cross(v),
@@ -1349,7 +1372,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             dense: true,
             title: const Text('Skip illiquid'),
             subtitle: const Text(
-              'No BUY if 20-day rupee ADV is under ₹10 lakh.',
+              'No BUY if 20-week rupee ADV is under ₹10 lakh.',
               style: TextStyle(fontSize: 11),
             ),
             value: filter.ema10CrossParams.skipIlliquid,
@@ -1364,7 +1387,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             dense: true,
             title: const Text('Skip climax volume'),
             subtitle: const Text(
-              'No BUY if signal-day volume is above 2× the prior 20-day average.',
+              'No BUY if signal-week volume is above 2× the prior 20-week average.',
               style: TextStyle(fontSize: 11),
             ),
             value: filter.ema10CrossParams.skipClimaxVolume,
@@ -1466,7 +1489,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             min: 0,
             max: 10,
             divisions: 10,
-            formatter: (v) => v == 0 ? 'today' : '${v.toStringAsFixed(0)} bars',
+            formatter: (v) =>
+                v == 0 ? 'this week' : '${v.toStringAsFixed(0)} weeks',
             onChanged: (v) => ref
                 .read(screenerFilterProvider.notifier)
                 .updateEma10CrossParams(
@@ -1484,7 +1508,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       title: 'Approaching EMA 200',
       icon: Icons.visibility_outlined,
       description:
-          'Watchlist only — 10 crossed 30 & 48, close still under a flattening 200',
+          'Weekly watchlist — 10 crossed 30 & 48, close still under a flattening 200',
       enabled: filter.useApproachingEma200,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleApproachingEma200(v),
@@ -1495,7 +1519,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             dense: true,
             title: const Text('Skip illiquid'),
             subtitle: const Text(
-              'No WATCH if 20-day rupee ADV is under ₹10 lakh.',
+              'No WATCH if 20-week rupee ADV is under ₹10 lakh.',
               style: TextStyle(fontSize: 11),
             ),
             value: p.skipIlliquid,
@@ -1508,7 +1532,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             dense: true,
             title: const Text('Skip climax volume'),
             subtitle: const Text(
-              'No WATCH if signal-day volume is above 2× the prior 20-day average.',
+              'No WATCH if signal-week volume is above 2× the prior 20-week average.',
               style: TextStyle(fontSize: 11),
             ),
             value: p.skipClimaxVolume,
@@ -1562,7 +1586,8 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
             min: 0,
             max: 10,
             divisions: 10,
-            formatter: (v) => v == 0 ? 'today' : '${v.toStringAsFixed(0)} bars',
+            formatter: (v) =>
+                v == 0 ? 'this week' : '${v.toStringAsFixed(0)} weeks',
             onChanged: (v) => ref
                 .read(screenerFilterProvider.notifier)
                 .updateApproachingEma200Params(

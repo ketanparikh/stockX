@@ -37,16 +37,16 @@ class AppConstants {
   static const double defaultMinMarketCapCrore = 15000.0;
   static const double defaultQualityVolumeMultiplier = 1.5;
 
-  // EMA 10 Cross: close above 10 and 200, EMA 10 crossed above 30 and 48
+  // EMA 10 Cross: weekly closes above 10 and 200, EMA 10 crossed above 30 and 48
   static const int defaultEma10Period = 10;
   static const int defaultEma10MidFastPeriod = 30;
   static const int defaultEma10MidSlowPeriod = 48;
   static const int defaultEma10TrendPeriod = 200;
   static const int defaultEma10CrossLookback = 5;
   static const int defaultEma10VolumeLookback = 20;
-  /// Skip BUY when 20-day rupee ADV is below this (₹10 lakh).
+  /// Skip BUY when 20-bar rupee ADV is below this (₹10 lakh).
   static const double defaultEma10MinAdvInr = 1000000.0;
-  /// Skip BUY when signal-day volume exceeds this multiple of the prior 20D avg.
+  /// Skip BUY when signal-bar volume exceeds this multiple of the prior 20-bar avg.
   static const double defaultEma10MaxVolumeMultiplier = 2.0;
   /// Skip BUY outside this close range (2y book: sub-₹100 and ₹1,500+ lose).
   static const double defaultEma10MinPrice = 100.0;
@@ -90,6 +90,18 @@ class Timeframe {
         return 'Monthly';
       default:
         return tf;
+    }
+  }
+
+  /// Yahoo chart range so weekly EMA 200 (200 weeks) has enough history.
+  static String yahooRange(String tf) {
+    switch (tf) {
+      case weekly:
+        return '10y';
+      case monthly:
+        return '5y';
+      default:
+        return '2y';
     }
   }
 }

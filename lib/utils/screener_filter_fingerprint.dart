@@ -29,7 +29,7 @@ Map<String, dynamic> _fingerprintMap(ScreenerFilter f) {
   return {
     'markets': markets,
     'sectors': sectors,
-    'timeframe': f.timeframe,
+    'timeframe': f.resolvedTimeframe,
     'useRsi': f.useRsi,
     'rsi': {
       'period': p.period,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/screener_filter.dart';
 import '../models/screener_result.dart';
 import '../services/screener_service.dart';
+import '../utils/constants.dart';
 import 'sync_provider.dart'
     show
         cacheServiceProvider,
@@ -54,6 +55,10 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
   }
 
   void setTimeframe(String timeframe) {
+    if (state.pinsWeeklyEmaStack && timeframe != Timeframe.weekly) {
+      state = state.copyWith(timeframe: Timeframe.weekly);
+      return;
+    }
     state = state.copyWith(timeframe: timeframe);
   }
 
@@ -98,7 +103,10 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
   }
 
   void toggleEma10Cross(bool enabled) {
-    state = state.copyWith(useEma10Cross: enabled);
+    state = state.copyWith(
+      useEma10Cross: enabled,
+      timeframe: enabled ? Timeframe.weekly : state.timeframe,
+    );
   }
 
   void updateEma10CrossParams(Ema10CrossFilterParams params) {
@@ -106,7 +114,10 @@ class ScreenerFilterNotifier extends StateNotifier<ScreenerFilter> {
   }
 
   void toggleApproachingEma200(bool enabled) {
-    state = state.copyWith(useApproachingEma200: enabled);
+    state = state.copyWith(
+      useApproachingEma200: enabled,
+      timeframe: enabled ? Timeframe.weekly : state.timeframe,
+    );
   }
 
   void updateApproachingEma200Params(ApproachingEma200FilterParams params) {

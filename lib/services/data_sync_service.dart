@@ -160,9 +160,5 @@ class DataSyncService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  static String _rangeFor(String timeframe) {
-    if (timeframe == Timeframe.weekly) return '2y';
-    if (timeframe == Timeframe.monthly) return '5y';
-    return '2y'; // daily: 200 DMA + Sethi breakout needs 201+ bars
-  }
+  static String _rangeFor(String timeframe) => Timeframe.yahooRange(timeframe);
 }

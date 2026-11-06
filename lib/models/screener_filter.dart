@@ -53,9 +53,9 @@ extension IndicatorTypeExt on IndicatorType {
       case IndicatorType.emaCrossover:
         return 'Fast and slow EMA crossover signals';
       case IndicatorType.ema10Cross:
-        return 'Close above EMA 10 and 200, 10 crossed 30 & 48; ₹100–1,500; skip illiquid, climax, defensive; top 5 by % above 200';
+        return 'Weekly closes: close above EMA 10 and 200, 10 crossed 30 & 48; ₹100–1,500; skip illiquid, climax, defensive; top 5 by % above 200';
       case IndicatorType.approachingEma200:
-        return 'Watchlist: 10 crossed 30 & 48, close 0–8% below a flattening EMA 200. Do not buy until close reclaims 200';
+        return 'Weekly watchlist: 10 crossed 30 & 48, close 0–8% below a flattening EMA 200. Do not buy until close reclaims 200';
       case IndicatorType.bollingerBands:
         return 'Volatility bands around a moving average';
       case IndicatorType.adx:
@@ -231,12 +231,12 @@ class Ema10CrossFilterParams {
   /// or EMA 10 is below 30 and 48.
   final bool requireSupertrend;
 
-  /// Skip BUY when 20-day rupee ADV is below [minAdvInr].
+  /// Skip BUY when 20-bar rupee ADV is below [minAdvInr].
   final bool skipIlliquid;
   final int volumeLookback;
   final double minAdvInr;
 
-  /// Skip BUY when signal-day volume exceeds [maxVolumeMultiplier] × 20D avg.
+  /// Skip BUY when signal-bar volume exceeds [maxVolumeMultiplier] × 20-bar avg.
   final bool skipClimaxVolume;
   final double maxVolumeMultiplier;
 
@@ -638,6 +638,13 @@ class ScreenerFilter {
     this.freshSignalMaxBars = 3,
     this.maxResults = AppConstants.defaultMaxResults,
   });
+
+  /// EMA 10 Cross and Approaching EMA 200 always run on weekly closes.
+  bool get pinsWeeklyEmaStack => useEma10Cross || useApproachingEma200;
+
+  /// Candles actually used for a run. Weekly when the EMA stack is on.
+  String get resolvedTimeframe =>
+      pinsWeeklyEmaStack ? Timeframe.weekly : timeframe;
 
   bool get hasAnyFilter =>
       useQualityFilter ||

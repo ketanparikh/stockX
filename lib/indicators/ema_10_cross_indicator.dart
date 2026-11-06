@@ -6,9 +6,10 @@ import '../utils/constants.dart';
 import 'indicator_utils.dart';
 import 'supertrend_indicator.dart';
 
-/// Entry: close above EMA 10 and EMA 200, EMA 10 crossed above 30 and 48,
-///        Supertrend BUY when [Ema10CrossFilterParams.requireSupertrend],
-///        and entry gates (liquidity, no climax volume, not defensive).
+/// Entry on weekly closes: close above EMA 10 and EMA 200, EMA 10 crossed
+///        above 30 and 48, Supertrend BUY when
+///        [Ema10CrossFilterParams.requireSupertrend], and entry gates
+///        (liquidity, no climax volume, not defensive).
 /// Exit: EMA 10 crossed below 30 and 48, or Supertrend SELL.
 class Ema10CrossIndicator {
   static const int _kHistoryLen = 50;

@@ -218,7 +218,7 @@ class _StockSearchScreenState extends ConsumerState<StockSearchScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Uses your current filter settings (${Timeframe.label(filter.timeframe)} chart)',
+                'Uses your current filter settings (${Timeframe.label(filter.resolvedTimeframe)} chart)',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: c.textMuted, fontSize: 12),
               ),
@@ -414,7 +414,7 @@ class _StockSearchScreenState extends ConsumerState<StockSearchScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            '${quote.market} · ${Timeframe.label(filter.timeframe)}',
+            '${quote.market} · ${Timeframe.label(filter.resolvedTimeframe)}',
             style: TextStyle(color: c.textMuted, fontSize: 11),
           ),
         ],

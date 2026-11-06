@@ -14,7 +14,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     defaults:
       run:
         working-directory: scripts
@@ -40,3 +40,12 @@ jobs:
         run: |
           echo "Local time: $(TZ=Asia/Kolkata date)"
           python -u fetch_nse_data.py --timeframe 1d --batch-size 20 --delay 2
+
+      - name: Fetch weekly NSE candles into Supabase
+        env:
+          PYTHONUNBUFFERED: "1"
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Local time: $(TZ=Asia/Kolkata date)"
+          python -u fetch_nse_data.py --timeframe 1wk --batch-size 20 --delay 2

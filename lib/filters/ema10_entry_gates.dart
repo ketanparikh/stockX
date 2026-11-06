@@ -3,8 +3,8 @@ import '../models/screener_filter.dart';
 
 /// Point-in-time entry gates for EMA 10 Cross BUY.
 ///
-/// From the 2y NSE book: skip illiquid names (20D ADV < ₹10 lakh), skip climax
-/// volume (>2× prior 20D avg), and skip low-beta businesses that do not trend
+/// From the NSE book: skip illiquid names (20-bar ADV < ₹10 lakh), skip climax
+/// volume (>2× prior 20-bar avg), and skip low-beta businesses that do not trend
 /// on this stack. Volume *surge* as a confirmation filter lost money here.
 class Ema10EntryGates {
   Ema10EntryGates._();
@@ -73,13 +73,13 @@ class Ema10EntryGates {
     final advInr = sumVal / lb;
 
     if (params.skipIlliquid && advInr < params.minAdvInr) {
-      return 'illiquid (20D ADV < ₹10 lakh)';
+      return 'illiquid (20-bar ADV < ₹10 lakh)';
     }
     if (params.skipClimaxVolume) {
       if (avgVol <= 0) return 'no volume';
       final ratio = candles[i].volume / avgVol;
       if (ratio > params.maxVolumeMultiplier) {
-        return 'climax volume (>${params.maxVolumeMultiplier.toStringAsFixed(1)}× 20D)';
+        return 'climax volume (>${params.maxVolumeMultiplier.toStringAsFixed(1)}× 20-bar)';
       }
     }
     return null;
