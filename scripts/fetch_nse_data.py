@@ -439,6 +439,48 @@ def _bar_date(ts) -> datetime.date:
     return t.date()
 
 
+def _monday(ts) -> pd.Timestamp:
+    t = pd.Timestamp(ts)
+    if t.tzinfo is None:
+        t = t.tz_localize("UTC")
+    else:
+        t = t.tz_convert("UTC")
+    t = t.normalize()
+    return t - pd.Timedelta(days=int(t.weekday()))
+
+
+def _apply_forming_week(weekly: pd.DataFrame | None, daily: pd.DataFrame | None) -> pd.DataFrame | None:
+    """Replace Yahoo's incomplete current week with OHLCV from daily bars.
+
+    Yahoo 1wk bars are dated Monday and stay NaN until the week fills in, so a
+    Monday/Tuesday scan would otherwise be stuck on last week's close.
+    """
+    if weekly is None or weekly.empty:
+        return weekly
+    daily = _prepare_ohlcv(daily)
+    if daily is None or daily.empty:
+        return weekly
+    last_daily = daily.index.max()
+    week_start = _monday(last_daily)
+    week = daily[daily.index >= week_start]
+    if week.empty:
+        return weekly
+    forming = pd.DataFrame(
+        {
+            "Open": [float(week["Open"].iloc[0])],
+            "High": [float(week["High"].max())],
+            "Low": [float(week["Low"].min())],
+            "Close": [float(week["Close"].iloc[-1])],
+            "Volume": [float(week["Volume"].sum())],
+        },
+        index=pd.DatetimeIndex([last_daily], tz="UTC"),
+    )
+    keep = weekly[weekly.index.map(_monday) < week_start]
+    out = pd.concat([keep, forming])
+    out = out[~out.index.duplicated(keep="last")].sort_index()
+    return out if not out.empty else weekly
+
+
 def _finite(value, ndigits: int | None = 4) -> float:
     x = float(value)
     if x != x:  # NaN
@@ -491,12 +533,31 @@ def fetch_batch(
     if raw is None:
         return result
 
+    daily_raw = None
+    if timeframe == "1wk":
+        for attempt in range(retries + 1):
+            daily_raw = _download_once(yahoo_symbols, "1d", "1mo")
+            if daily_raw is not None:
+                break
+            if attempt < retries:
+                time.sleep(2 ** attempt)
+
     need = config.min_bars(timeframe)
+
+    def _daily_for(sym: str) -> pd.DataFrame | None:
+        if daily_raw is None:
+            return None
+        try:
+            return daily_raw if len(yahoo_symbols) == 1 else daily_raw[sym]
+        except Exception:
+            return None
 
     # Single ticker: yf.download may return flat or MultiIndex columns
     if len(yahoo_symbols) == 1:
         sym = yahoo_symbols[0]
         df = _prepare_ohlcv(raw)
+        if timeframe == "1wk":
+            df = _apply_forming_week(df, _daily_for(sym))
         if df is not None and len(df) >= need:
             result[sym] = df
         return result
@@ -505,6 +566,8 @@ def fetch_batch(
     for sym in yahoo_symbols:
         try:
             df = _prepare_ohlcv(raw[sym])
+            if timeframe == "1wk":
+                df = _apply_forming_week(df, _daily_for(sym))
             if df is not None and len(df) >= need:
                 result[sym] = df
         except (KeyError, Exception):
