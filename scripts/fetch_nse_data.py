@@ -416,6 +416,36 @@ def _extract_ohlcv(df: pd.DataFrame) -> pd.DataFrame | None:
         return None
 
 
+def _prepare_ohlcv(df: pd.DataFrame | None) -> pd.DataFrame | None:
+    """Drop incomplete bars (NaN OHLC) so JSON upserts never see NaN."""
+    if df is None or df.empty:
+        return None
+    out = _extract_ohlcv(df.dropna(how="all"))
+    if out is None or out.empty:
+        return None
+    out = out.copy()
+    out["Volume"] = out["Volume"].fillna(0)
+    out = out.dropna(subset=["Open", "High", "Low", "Close"])
+    if out.empty:
+        return None
+    out.index = pd.to_datetime(out.index, utc=True)
+    return out
+
+
+def _bar_date(ts) -> datetime.date:
+    t = pd.Timestamp(ts)
+    if t.tzinfo is not None:
+        t = t.tz_convert("UTC")
+    return t.date()
+
+
+def _finite(value, ndigits: int | None = 4) -> float:
+    x = float(value)
+    if x != x:  # NaN
+        return 0.0
+    return round(x, ndigits) if ndigits is not None else x
+
+
 def _download_once(yahoo_symbols: list[str], timeframe: str, period: str) -> pd.DataFrame | None:
     try:
         raw = yf.download(
@@ -461,22 +491,21 @@ def fetch_batch(
     if raw is None:
         return result
 
+    need = config.min_bars(timeframe)
+
     # Single ticker: yf.download may return flat or MultiIndex columns
     if len(yahoo_symbols) == 1:
         sym = yahoo_symbols[0]
-        df = _extract_ohlcv(raw.dropna(how="all"))
-        if df is not None and len(df) >= config.min_bars(timeframe):
-            df.index = pd.to_datetime(df.index, utc=True)
+        df = _prepare_ohlcv(raw)
+        if df is not None and len(df) >= need:
             result[sym] = df
         return result
 
     # Multiple tickers: columns are (field, ticker) multi-level
     for sym in yahoo_symbols:
         try:
-            ticker_df = raw[sym].dropna(how="all")
-            df = _extract_ohlcv(ticker_df)
-            if df is not None and len(df) >= config.min_bars(timeframe):
-                df.index = pd.to_datetime(df.index, utc=True)
+            df = _prepare_ohlcv(raw[sym])
+            if df is not None and len(df) >= need:
                 result[sym] = df
         except (KeyError, Exception):
             pass
@@ -486,17 +515,17 @@ def fetch_batch(
 
 def df_to_row(symbol: str, timeframe: str, df: pd.DataFrame) -> dict:
     """Convert a DataFrame to the Supabase row format."""
-    timestamps = [int(ts.timestamp() * 1000) for ts in df.index]
+    timestamps = [int(pd.Timestamp(ts).timestamp() * 1000) for ts in df.index]
     return {
         "symbol":       symbol,
         "timeframe":    timeframe,
         "last_updated": datetime.now(timezone.utc).isoformat(),
         "t":            timestamps,
-        "o":            [round(float(v), 4) for v in df["Open"]],
-        "h":            [round(float(v), 4) for v in df["High"]],
-        "l":            [round(float(v), 4) for v in df["Low"]],
-        "c":            [round(float(v), 4) for v in df["Close"]],
-        "v":            [float(v) for v in df["Volume"]],
+        "o":            [_finite(v) for v in df["Open"]],
+        "h":            [_finite(v) for v in df["High"]],
+        "l":            [_finite(v) for v in df["Low"]],
+        "c":            [_finite(v) for v in df["Close"]],
+        "v":            [_finite(v, None) for v in df["Volume"]],
     }
 
 
@@ -589,9 +618,11 @@ def main():
                 df = fetched.get(yahoo_sym)
                 if df is None:
                     failed += 1
-                    record_failure(sym)
+                    if args.timeframe == "1d":
+                        record_failure(sym)
                 else:
-                    record_success(sym)
+                    if args.timeframe == "1d":
+                        record_success(sym)
                     end = df.index.max()
                     if newest_bar is None or end > newest_bar:
                         newest_bar = end
@@ -604,15 +635,19 @@ def main():
 
             # Flush accumulated rows to Supabase after each batch
             if upsert_rows and not args.dry_run:
-                written = upsert_batch(client, upsert_rows)
-                upserted += written
-                upsert_rows.clear()
+                try:
+                    written = upsert_batch(client, upsert_rows)
+                    upserted += written
+                    upsert_rows.clear()
+                except Exception as e:
+                    print(f"\n  [WARN] upsert failed: {e}", flush=True)
+                    raise
 
             # Brief pause between batches to avoid rate-limiting
             if i + args.batch_size < total:
                 time.sleep(args.delay)
 
-    newest_s = newest_bar.strftime("%Y-%m-%d") if newest_bar is not None else "none"
+    newest_s = _bar_date(newest_bar).isoformat() if newest_bar is not None else "none"
     # ── Summary ───────────────────────────────────────────────────────────────
     print("\n" + "=" * 60)
     print(f"  Done at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -629,7 +664,7 @@ def main():
     cutoff = datetime.now(timezone.utc).date() - timedelta(
         days=config.stale_days(args.timeframe)
     )
-    stale = newest_bar is None or newest_bar.date() < cutoff
+    stale = newest_bar is None or _bar_date(newest_bar) < cutoff
     if not args.dry_run and (upserted == 0 or success == 0 or stale):
         print(
             f"ERROR: fetch did not refresh candles "
