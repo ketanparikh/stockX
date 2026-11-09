@@ -1,4 +1,5 @@
 import '../models/candle_data.dart';
+import '../utils/candle_series.dart';
 import '../utils/constants.dart';
 import '../utils/stock_symbols.dart';
 import 'cache_service.dart';
@@ -64,11 +65,7 @@ class DataSyncService {
 
       final futures = batch.map((stock) async {
         try {
-          final candles = await _finance.fetchCandles(
-            stock.yahooSymbol,
-            timeframe,
-            range: range,
-          );
+          final candles = await _loadCandles(stock, timeframe, range);
           if (candles.length >= 2) {
             _cache.store(stock.symbol, timeframe, candles);
             // Non-blocking Firestore write — errors are swallowed inside the
@@ -144,11 +141,7 @@ class DataSyncService {
     String timeframe,
   ) async {
     try {
-      final candles = await _finance.fetchCandles(
-        stock.yahooSymbol,
-        timeframe,
-        range: _rangeFor(timeframe),
-      );
+      final candles = await _loadCandles(stock, timeframe, _rangeFor(timeframe));
       if (candles.length >= 2) {
         _cache.store(stock.symbol, timeframe, candles);
         _supabase.writeCandles(stock.symbol, timeframe, candles).ignore();
@@ -161,4 +154,24 @@ class DataSyncService {
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   static String _rangeFor(String timeframe) => Timeframe.yahooRange(timeframe);
+
+  Future<List<CandleData>> _loadCandles(
+    StockSymbol stock,
+    String timeframe,
+    String range,
+  ) async {
+    if (timeframe == Timeframe.weekly) {
+      final daily = await _finance.fetchCandles(
+        stock.yahooSymbol,
+        Timeframe.daily,
+        range: range,
+      );
+      return CandleSeries.weeksEndingOnLatest(daily);
+    }
+    return _finance.fetchCandles(
+      stock.yahooSymbol,
+      timeframe,
+      range: range,
+    );
+  }
 }

@@ -15,7 +15,7 @@ SUPABASE_ANON_KEY = (
 # How far back to pull candles for each timeframe.
 FETCH_RANGE = {
     "1d":  "2y",    # ~500 daily bars (Sethi / 200 DMA needs 201+)
-    "1wk": "10y",   # ~520 weekly bars (EMA 200 needs 200 weeks)
+    "1wk": "10y",   # 10y daily, resampled to 7-day bars ending on latest close
     "1mo": "5y",    # ~60  monthly bars
 }
 

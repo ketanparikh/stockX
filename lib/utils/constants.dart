@@ -93,7 +93,7 @@ class Timeframe {
     }
   }
 
-  /// Yahoo chart range so weekly EMA 200 (200 weeks) has enough history.
+  /// Yahoo chart range. Weekly is 10y of daily bars, resampled to 7-day weeks.
   static String yahooRange(String tf) {
     switch (tf) {
       case weekly:

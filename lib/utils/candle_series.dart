@@ -47,6 +47,43 @@ class CandleSeries {
     }
   }
 
+  /// Weekly bars as 7-calendar-day buckets ending on the latest daily session.
+  /// The last bar is dated with that session, not the Monday of the week.
+  static List<CandleData> weeksEndingOnLatest(List<CandleData> daily) {
+    if (daily.length < 2) return daily;
+    final sorted = CandleSeries.sorted(daily);
+    final last = sorted.last.timestamp;
+    final lastDay = DateTime(last.year, last.month, last.day);
+    final groups = <int, List<CandleData>>{};
+    for (final c in sorted) {
+      final d = DateTime(c.timestamp.year, c.timestamp.month, c.timestamp.day);
+      final delta = lastDay.difference(d).inDays;
+      if (delta < 0) continue;
+      groups.putIfAbsent(delta ~/ 7, () => []).add(c);
+    }
+    final ids = groups.keys.toList()..sort((a, b) => b.compareTo(a));
+    return [for (final id in ids) _aggregateWeek(groups[id]!)];
+  }
+
+  static CandleData _aggregateWeek(List<CandleData> bars) {
+    var high = bars.first.high;
+    var low = bars.first.low;
+    var volume = 0.0;
+    for (final c in bars) {
+      if (c.high > high) high = c.high;
+      if (c.low < low) low = c.low;
+      volume += c.volume;
+    }
+    return CandleData(
+      timestamp: bars.last.timestamp,
+      open: bars.first.open,
+      high: high,
+      low: low,
+      close: bars.last.close,
+      volume: volume,
+    );
+  }
+
   static StockQuote quoteFromCandles(StockSymbol stock, List<CandleData> candles) {
     final last = candles.last;
     final prev = candles[candles.length - 2];

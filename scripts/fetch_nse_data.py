@@ -439,46 +439,36 @@ def _bar_date(ts) -> datetime.date:
     return t.date()
 
 
-def _monday(ts) -> pd.Timestamp:
-    t = pd.Timestamp(ts)
-    if t.tzinfo is None:
-        t = t.tz_localize("UTC")
-    else:
-        t = t.tz_convert("UTC")
-    t = t.normalize()
-    return t - pd.Timedelta(days=int(t.weekday()))
+def weeks_ending_latest(daily: pd.DataFrame | None) -> pd.DataFrame | None:
+    """Build weekly bars as 7-calendar-day buckets ending on the latest session.
 
-
-def _apply_forming_week(weekly: pd.DataFrame | None, daily: pd.DataFrame | None) -> pd.DataFrame | None:
-    """Replace Yahoo's incomplete current week with OHLCV from daily bars.
-
-    Yahoo 1wk bars are dated Monday and stay NaN until the week fills in, so a
-    Monday/Tuesday scan would otherwise be stuck on last week's close.
+    Yahoo 1wk is Monday-aligned. Live EMA Cross uses weeks that end on the
+    present close: week 0 is (today-6d .. today), week 1 is the 7 days before
+    that, and so on. Each bar is dated with its last session, not Monday.
     """
-    if weekly is None or weekly.empty:
-        return weekly
     daily = _prepare_ohlcv(daily)
     if daily is None or daily.empty:
-        return weekly
-    last_daily = daily.index.max()
-    week_start = _monday(last_daily)
-    week = daily[daily.index >= week_start]
-    if week.empty:
-        return weekly
-    forming = pd.DataFrame(
-        {
-            "Open": [float(week["Open"].iloc[0])],
-            "High": [float(week["High"].max())],
-            "Low": [float(week["Low"].min())],
-            "Close": [float(week["Close"].iloc[-1])],
-            "Volume": [float(week["Volume"].sum())],
-        },
-        index=pd.DatetimeIndex([last_daily], tz="UTC"),
-    )
-    keep = weekly[weekly.index.map(_monday) < week_start]
-    out = pd.concat([keep, forming])
-    out = out[~out.index.duplicated(keep="last")].sort_index()
-    return out if not out.empty else weekly
+        return None
+    daily = daily.sort_index()
+    last_day = daily.index.max().tz_convert("UTC").normalize()
+    days = daily.index.tz_convert("UTC").normalize()
+    week_id = ((last_day - days).days // 7).astype(int)
+    parts: list[dict] = []
+    stamps: list[pd.Timestamp] = []
+    for _, group in daily.groupby(week_id, sort=True):
+        group = group.sort_index()
+        parts.append(
+            {
+                "Open": float(group["Open"].iloc[0]),
+                "High": float(group["High"].max()),
+                "Low": float(group["Low"].min()),
+                "Close": float(group["Close"].iloc[-1]),
+                "Volume": float(group["Volume"].sum()),
+            }
+        )
+        stamps.append(group.index.max())
+    out = pd.DataFrame(parts, index=pd.DatetimeIndex(stamps))
+    return out.sort_index()
 
 
 def _finite(value, ndigits: int | None = 4) -> float:
@@ -521,9 +511,12 @@ def fetch_batch(
     if not yahoo_symbols:
         return {}
 
+    # Weekly live bars are 7-day buckets ending on the latest daily close,
+    # not Yahoo's Monday-aligned 1wk series.
+    download_tf = "1d" if timeframe == "1wk" else timeframe
     raw = None
     for attempt in range(retries + 1):
-        raw = _download_once(yahoo_symbols, timeframe, period)
+        raw = _download_once(yahoo_symbols, download_tf, period)
         if raw is not None:
             break
         if attempt < retries:
@@ -533,41 +526,27 @@ def fetch_batch(
     if raw is None:
         return result
 
-    daily_raw = None
-    if timeframe == "1wk":
-        for attempt in range(retries + 1):
-            daily_raw = _download_once(yahoo_symbols, "1d", "1mo")
-            if daily_raw is not None:
-                break
-            if attempt < retries:
-                time.sleep(2 ** attempt)
-
     need = config.min_bars(timeframe)
 
-    def _daily_for(sym: str) -> pd.DataFrame | None:
-        if daily_raw is None:
-            return None
+    def _frame_for(sym: str) -> pd.DataFrame | None:
         try:
-            return daily_raw if len(yahoo_symbols) == 1 else daily_raw[sym]
+            src = raw if len(yahoo_symbols) == 1 else raw[sym]
         except Exception:
             return None
+        if timeframe == "1wk":
+            return weeks_ending_latest(src)
+        return _prepare_ohlcv(src)
 
-    # Single ticker: yf.download may return flat or MultiIndex columns
     if len(yahoo_symbols) == 1:
         sym = yahoo_symbols[0]
-        df = _prepare_ohlcv(raw)
-        if timeframe == "1wk":
-            df = _apply_forming_week(df, _daily_for(sym))
+        df = _frame_for(sym)
         if df is not None and len(df) >= need:
             result[sym] = df
         return result
 
-    # Multiple tickers: columns are (field, ticker) multi-level
     for sym in yahoo_symbols:
         try:
-            df = _prepare_ohlcv(raw[sym])
-            if timeframe == "1wk":
-                df = _apply_forming_week(df, _daily_for(sym))
+            df = _frame_for(sym)
             if df is not None and len(df) >= need:
                 result[sym] = df
         except (KeyError, Exception):

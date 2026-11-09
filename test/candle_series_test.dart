@@ -37,6 +37,45 @@ void main() {
     expect(CandleSeries.isCurrent(candles, Timeframe.daily, now: now), isFalse);
   });
 
+  test('weeksEndingOnLatest buckets 7 calendar days ending on latest session', () {
+    CandleData bar(int y, int m, int d,
+        {required double open,
+        required double high,
+        required double low,
+        required double close,
+        required double volume}) {
+      return CandleData(
+        timestamp: DateTime.utc(y, m, d),
+        open: open,
+        high: high,
+        low: low,
+        close: close,
+        volume: volume,
+      );
+    }
+
+    // Latest session = 9 Nov 2026. Week 0 is 3–9 Nov; week 1 is 27 Oct–2 Nov.
+    final weeks = CandleSeries.weeksEndingOnLatest([
+      bar(2026, 10, 27, open: 100, high: 110, low: 90, close: 105, volume: 1),
+      bar(2026, 10, 28, open: 105, high: 120, low: 95, close: 108, volume: 2),
+      bar(2026, 11, 2, open: 108, high: 109, low: 100, close: 101, volume: 3),
+      bar(2026, 11, 3, open: 101, high: 130, low: 99, close: 125, volume: 4),
+      bar(2026, 11, 6, open: 125, high: 140, low: 120, close: 130, volume: 5),
+      bar(2026, 11, 9, open: 130, high: 135, low: 128, close: 132, volume: 6),
+    ]);
+
+    expect(weeks, hasLength(2));
+    expect(weeks.last.timestamp, DateTime.utc(2026, 11, 9));
+    expect(weeks.last.open, 101);
+    expect(weeks.last.high, 140);
+    expect(weeks.last.low, 99);
+    expect(weeks.last.close, 132);
+    expect(weeks.last.volume, 15);
+    expect(weeks.first.timestamp, DateTime.utc(2026, 11, 2));
+    expect(weeks.first.open, 100);
+    expect(weeks.first.close, 101);
+  });
+
   test('quote uses the latest candle close', () {
     final last = DateTime(2026, 8, 27);
     final candles = _barsEnding(last, close: 100);
