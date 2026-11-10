@@ -616,20 +616,14 @@ class ScreenerService {
         final p = filter.ema10CrossParams;
         final gates = <String>[];
         if (p.skipIlliquid) gates.add('ADV ≥ ₹10L');
-        if (p.skipClimaxVolume) {
-          gates.add('vol ≤ ${p.maxVolumeMultiplier.toStringAsFixed(1)}×');
-        }
-        if (p.skipDefensive) gates.add('no defensive');
         if (p.applyPriceBand) {
           gates.add(
             '₹${p.minPrice.toStringAsFixed(0)}–${p.maxPrice.toStringAsFixed(0)}',
           );
         }
-        final st = p.requireSupertrend ? ' + ST BUY' : '';
         final extra = gates.isEmpty ? '' : ' · ${gates.join(' · ')}';
-        return 'EMA 10 Cross — BUY close > 10 & 200$st$extra · '
-            'SELL ${p.requireSupertrend ? 'ST SELL or ' : ''}10 below 30 & 48 '
-            '(≤${p.crossLookback} bars)';
+        return 'EMA 10 Cross — BUY close > 10 & 200$extra · '
+            'SELL 10 below 30 & 48';
       case ApproachingEma200Result.resultName:
         final p = filter.approachingEma200Params;
         final gates = <String>[];

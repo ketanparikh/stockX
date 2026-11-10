@@ -166,7 +166,6 @@ class Ema10CrossResult extends IndicatorResult {
   final bool setupActive;
   final bool exitActive;
   final String? skipReason;
-  final bool requireSupertrend;
   /// Close vs EMA 200, percent. Positive when price is above 200.
   final double pctAbove200;
 
@@ -180,7 +179,6 @@ class Ema10CrossResult extends IndicatorResult {
     required this.setupActive,
     this.exitActive = false,
     this.skipReason,
-    this.requireSupertrend = false,
     this.pctAbove200 = 0,
     required SignalType signal,
     int signalAge = 0,
@@ -195,7 +193,6 @@ class Ema10CrossResult extends IndicatorResult {
             cross30Age: cross30Age,
             cross48Age: cross48Age,
             skipReason: skipReason,
-            requireSupertrend: requireSupertrend,
             pctAbove200: pctAbove200,
           ),
           signalAge: signalAge,
@@ -212,22 +209,19 @@ class Ema10CrossResult extends IndicatorResult {
     required int cross30Age,
     required int cross48Age,
     String? skipReason,
-    required bool requireSupertrend,
     required double pctAbove200,
   }) {
     if (skipReason != null) {
       return 'BUY skipped: $skipReason';
     }
     if (signal == SignalType.buy) {
-      final st = requireSupertrend ? ' · ST BUY' : '';
       final vs200 = pctAbove200 >= 0
           ? '+${pctAbove200.toStringAsFixed(1)}% vs 200'
           : '${pctAbove200.toStringAsFixed(1)}% vs 200';
-      return 'Close > 10 & 200$st · $vs200 · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
+      return 'Close > 10 & 200 · $vs200 · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
     }
     if (signal == SignalType.sell) {
-      final st = requireSupertrend ? 'ST SELL or ' : '';
-      return 'Exit: ${st}10 below 30 & 48 · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
+      return 'Exit: 10 below 30 & 48 · 10×30 ${_ageLabel(cross30Age)} · 10×48 ${_ageLabel(cross48Age)}';
     }
     return 'No entry/exit (need 10 above or below both 30 & 48)';
   }

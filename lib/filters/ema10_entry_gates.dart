@@ -3,9 +3,8 @@ import '../models/screener_filter.dart';
 
 /// Point-in-time entry gates for EMA 10 Cross BUY.
 ///
-/// From the NSE book: skip illiquid names (20-bar ADV < ₹10 lakh), skip climax
-/// volume (>2× prior 20-bar avg), and skip low-beta businesses that do not trend
-/// on this stack. Volume *surge* as a confirmation filter lost money here.
+/// Live EMA 10 Cross only skips illiquid names and the price band.
+/// Climax volume and defensive skips remain available for Approaching EMA 200.
 class Ema10EntryGates {
   Ema10EntryGates._();
 

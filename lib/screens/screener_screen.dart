@@ -1351,7 +1351,7 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
       title: 'EMA 10 Cross',
       icon: Icons.timeline,
       description:
-          'Weekly closes · BUY: close > 10 & 200 · ₹100–1,500 · skip illiquid/climax/defensive · top 5 vs EMA 200',
+          'Weekly closes · BUY: close > 10 & 200 · ₹100–1,500 · skip illiquid · top 5 vs EMA 200',
       enabled: filter.useEma10Cross,
       onToggle: (v) =>
           ref.read(screenerFilterProvider.notifier).toggleEma10Cross(v),
@@ -1380,36 +1380,6 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 .read(screenerFilterProvider.notifier)
                 .updateEma10CrossParams(
                   filter.ema10CrossParams.copyWith(skipIlliquid: v),
-                ),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text('Skip climax volume'),
-            subtitle: const Text(
-              'No BUY if signal-week volume is above 2× the prior 20-week average.',
-              style: TextStyle(fontSize: 11),
-            ),
-            value: filter.ema10CrossParams.skipClimaxVolume,
-            onChanged: (v) => ref
-                .read(screenerFilterProvider.notifier)
-                .updateEma10CrossParams(
-                  filter.ema10CrossParams.copyWith(skipClimaxVolume: v),
-                ),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text('Skip defensive names'),
-            subtitle: const Text(
-              'No BUY on FMCG, paints, insurance, OMCs, defence PSUs, large IT.',
-              style: TextStyle(fontSize: 11),
-            ),
-            value: filter.ema10CrossParams.skipDefensive,
-            onChanged: (v) => ref
-                .read(screenerFilterProvider.notifier)
-                .updateEma10CrossParams(
-                  filter.ema10CrossParams.copyWith(skipDefensive: v),
                 ),
           ),
           SwitchListTile(
@@ -1466,35 +1436,6 @@ class _ScreenerScreenState extends ConsumerState<ScreenerScreen> {
                 .read(screenerFilterProvider.notifier)
                 .updateEma10CrossParams(
                   filter.ema10CrossParams.copyWith(highlightTopN: v.toInt()),
-                ),
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: const Text('Require Supertrend'),
-            subtitle: const Text(
-              'Off by default — ST SELL cuts the 60–80 day runners.',
-              style: TextStyle(fontSize: 11),
-            ),
-            value: filter.ema10CrossParams.requireSupertrend,
-            onChanged: (v) => ref
-                .read(screenerFilterProvider.notifier)
-                .updateEma10CrossParams(
-                  filter.ema10CrossParams.copyWith(requireSupertrend: v),
-                ),
-          ),
-          LabeledSlider(
-            label: 'Entry/exit completed within',
-            value: filter.ema10CrossParams.crossLookback.toDouble(),
-            min: 0,
-            max: 10,
-            divisions: 10,
-            formatter: (v) =>
-                v == 0 ? 'this week' : '${v.toStringAsFixed(0)} weeks',
-            onChanged: (v) => ref
-                .read(screenerFilterProvider.notifier)
-                .updateEma10CrossParams(
-                  filter.ema10CrossParams.copyWith(crossLookback: v.toInt()),
                 ),
           ),
         ],

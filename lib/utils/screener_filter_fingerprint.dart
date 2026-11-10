@@ -72,7 +72,6 @@ Map<String, dynamic> _fingerprintMap(ScreenerFilter f) {
       'midSlow': f.ema10CrossParams.midSlowPeriod,
       'trend': f.ema10CrossParams.trendPeriod,
       'lookback': f.ema10CrossParams.crossLookback,
-      'requireST': f.ema10CrossParams.requireSupertrend,
       'skipIlliquid': f.ema10CrossParams.skipIlliquid,
       'volLb': f.ema10CrossParams.volumeLookback,
       'minAdv': f.ema10CrossParams.minAdvInr,

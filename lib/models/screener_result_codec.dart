@@ -132,7 +132,6 @@ Map<String, dynamic> encodeIndicator(IndicatorResult r) {
       'active': r.setupActive,
       'exit': r.exitActive,
       'skip': r.skipReason,
-      'st': r.requireSupertrend,
       'vs200': r.pctAbove200,
     };
   }
@@ -250,7 +249,6 @@ IndicatorResult decodeIndicator(Map<String, dynamic> m) {
         setupActive: m['active'] as bool? ?? sig == SignalType.buy,
         exitActive: m['exit'] as bool? ?? sig == SignalType.sell,
         skipReason: m['skip'] as String?,
-        requireSupertrend: m['st'] as bool? ?? false,
         pctAbove200: (m['vs200'] as num?)?.toDouble() ?? 0,
         signal: sig,
         signalAge: age,

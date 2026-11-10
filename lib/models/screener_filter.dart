@@ -53,7 +53,7 @@ extension IndicatorTypeExt on IndicatorType {
       case IndicatorType.emaCrossover:
         return 'Fast and slow EMA crossover signals';
       case IndicatorType.ema10Cross:
-        return 'Weekly closes: close above EMA 10 and 200, 10 crossed 30 & 48; ₹100–1,500; skip illiquid, climax, defensive; top 5 by % above 200';
+        return 'Weekly closes: close above EMA 10 and 200, 10 crossed 30 & 48; ₹100–1,500; skip illiquid; top 5 by % above 200';
       case IndicatorType.approachingEma200:
         return 'Weekly watchlist: 10 crossed 30 & 48, close 0–8% below a flattening EMA 200. Do not buy until close reclaims 200';
       case IndicatorType.bollingerBands:
@@ -224,23 +224,19 @@ class Ema10CrossFilterParams {
   final int trendPeriod;
 
   /// The later of the 10/30 and 10/48 crosses (up for entry, down for exit)
-  /// must fall within this many bars. 0 = completing cross on the latest bar.
+  /// must fall within this many bars. Fixed at 5 weeks; not shown in the UI.
   final int crossLookback;
-
-  /// When true, BUY also requires Supertrend BUY; SELL if Supertrend SELL
-  /// or EMA 10 is below 30 and 48.
-  final bool requireSupertrend;
 
   /// Skip BUY when 20-bar rupee ADV is below [minAdvInr].
   final bool skipIlliquid;
   final int volumeLookback;
   final double minAdvInr;
 
-  /// Skip BUY when signal-bar volume exceeds [maxVolumeMultiplier] × 20-bar avg.
+  /// Unused on EMA 10 Cross (kept so Approaching EMA 200 can share gates).
   final bool skipClimaxVolume;
   final double maxVolumeMultiplier;
 
-  /// Skip BUY on FMCG, insurance, OMCs, defence PSUs, and large IT.
+  /// Unused on EMA 10 Cross (kept so Approaching EMA 200 can share gates).
   final bool skipDefensive;
 
   /// Skip BUY when close is outside [minPrice]–[maxPrice].
@@ -259,13 +255,12 @@ class Ema10CrossFilterParams {
     this.midSlowPeriod = AppConstants.defaultEma10MidSlowPeriod,
     this.trendPeriod = AppConstants.defaultEma10TrendPeriod,
     this.crossLookback = AppConstants.defaultEma10CrossLookback,
-    this.requireSupertrend = false,
     this.skipIlliquid = true,
     this.volumeLookback = AppConstants.defaultEma10VolumeLookback,
     this.minAdvInr = AppConstants.defaultEma10MinAdvInr,
-    this.skipClimaxVolume = true,
+    this.skipClimaxVolume = false,
     this.maxVolumeMultiplier = AppConstants.defaultEma10MaxVolumeMultiplier,
-    this.skipDefensive = true,
+    this.skipDefensive = false,
     this.applyPriceBand = true,
     this.minPrice = AppConstants.defaultEma10MinPrice,
     this.maxPrice = AppConstants.defaultEma10MaxPrice,
@@ -279,7 +274,6 @@ class Ema10CrossFilterParams {
     int? midSlowPeriod,
     int? trendPeriod,
     int? crossLookback,
-    bool? requireSupertrend,
     bool? skipIlliquid,
     int? volumeLookback,
     double? minAdvInr,
@@ -298,7 +292,6 @@ class Ema10CrossFilterParams {
         midSlowPeriod: midSlowPeriod ?? this.midSlowPeriod,
         trendPeriod: trendPeriod ?? this.trendPeriod,
         crossLookback: crossLookback ?? this.crossLookback,
-        requireSupertrend: requireSupertrend ?? this.requireSupertrend,
         skipIlliquid: skipIlliquid ?? this.skipIlliquid,
         volumeLookback: volumeLookback ?? this.volumeLookback,
         minAdvInr: minAdvInr ?? this.minAdvInr,

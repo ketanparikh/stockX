@@ -4,13 +4,10 @@ import '../models/indicator_result.dart';
 import '../models/screener_filter.dart';
 import '../utils/constants.dart';
 import 'indicator_utils.dart';
-import 'supertrend_indicator.dart';
 
 /// Entry on weekly closes: close above EMA 10 and EMA 200, EMA 10 crossed
-///        above 30 and 48, Supertrend BUY when
-///        [Ema10CrossFilterParams.requireSupertrend], and entry gates
-///        (liquidity, no climax volume, not defensive).
-/// Exit: EMA 10 crossed below 30 and 48, or Supertrend SELL.
+///        above 30 and 48, plus entry gates (liquidity, price band).
+/// Exit: EMA 10 crossed below 30 and 48.
 class Ema10CrossIndicator {
   static const int _kHistoryLen = 50;
 
@@ -36,9 +33,6 @@ class Ema10CrossIndicator {
     if (e10 == null || e30 == null || e48 == null || e200 == null) return null;
 
     final start = params.trendPeriod;
-    final stBull = params.requireSupertrend
-        ? SupertrendIndicator.bullSeries(candles, const SupertrendFilterParams())
-        : null;
     final history = <SignalType>[];
     for (var i = start; i < n; i++) {
       history.add(
@@ -52,7 +46,6 @@ class Ema10CrossIndicator {
           i,
           params,
           symbol: symbol,
-          stBull: stBull?[i],
         ),
       );
     }
@@ -101,7 +94,6 @@ class Ema10CrossIndicator {
       setupActive: setupActive,
       exitActive: exitActive,
       skipReason: skipReason,
-      requireSupertrend: params.requireSupertrend,
       pctAbove200: pctAbove200,
       signal: signal,
       signalAge: age,
@@ -134,7 +126,6 @@ class Ema10CrossIndicator {
     int i,
     Ema10CrossFilterParams params, {
     String? symbol,
-    bool? stBull,
   }) {
     final emaBuy = _isSetup(
       closes,
@@ -146,10 +137,8 @@ class Ema10CrossIndicator {
       params.crossLookback,
     );
     final emaSell = _isExit(ema10, ema30, ema48, i, params.crossLookback);
-    final stBuy = !params.requireSupertrend || stBull == true;
-    final stSell = params.requireSupertrend && stBull == false;
 
-    if (emaBuy && stBuy) {
+    if (emaBuy) {
       final skip = Ema10EntryGates.buySkipReason(
         candles: candles,
         i: i,
@@ -159,7 +148,7 @@ class Ema10CrossIndicator {
       if (skip == null) return SignalType.buy;
       return SignalType.neutral;
     }
-    if (emaSell || stSell) return SignalType.sell;
+    if (emaSell) return SignalType.sell;
     return SignalType.neutral;
   }
 

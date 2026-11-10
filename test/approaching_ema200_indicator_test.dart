@@ -162,7 +162,6 @@ void main() {
     final buy = Ema10CrossIndicator.calculate(
       candles,
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
         skipClimaxVolume: false,
         skipDefensive: false,

@@ -21,7 +21,6 @@ List<CandleData> _candles(List<double> closes, {double volume = 1000}) {
 
 /// Tape gates off so price-path tests isolate the EMA stack.
 const _stackOnly = Ema10CrossFilterParams(
-  requireSupertrend: false,
   skipIlliquid: false,
   skipClimaxVolume: false,
   skipDefensive: false,
@@ -80,7 +79,7 @@ void main() {
     expect(
       Ema10CrossIndicator.matchesFilter(
         result,
-        const Ema10CrossFilterParams(requireSupertrend: false, signal: 'BUY'),
+        const Ema10CrossFilterParams(signal: 'BUY'),
       ),
       isFalse,
     );
@@ -122,7 +121,7 @@ void main() {
     expect(
       Ema10CrossIndicator.matchesFilter(
         result,
-        const Ema10CrossFilterParams(requireSupertrend: false, signal: 'BUY'),
+        const Ema10CrossFilterParams(signal: 'BUY'),
       ),
       isTrue,
     );
@@ -137,7 +136,6 @@ void main() {
     final loose = Ema10CrossIndicator.calculate(
       _candles(closes),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
         skipClimaxVolume: false,
         skipDefensive: false,
@@ -178,14 +176,14 @@ void main() {
     expect(
       Ema10CrossIndicator.matchesFilter(
         result,
-        const Ema10CrossFilterParams(requireSupertrend: false, signal: 'SELL'),
+        const Ema10CrossFilterParams(signal: 'SELL'),
       ),
       isTrue,
     );
     expect(
       Ema10CrossIndicator.matchesFilter(
         result,
-        const Ema10CrossFilterParams(requireSupertrend: false, signal: 'BUY'),
+        const Ema10CrossFilterParams(signal: 'BUY'),
       ),
       isFalse,
     );
@@ -200,7 +198,6 @@ void main() {
     final loose = Ema10CrossIndicator.calculate(
       _candles(closes),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
         skipClimaxVolume: false,
         skipDefensive: false,
@@ -218,7 +215,6 @@ void main() {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 1000),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipClimaxVolume: false,
         skipDefensive: false,
       ),
@@ -228,13 +224,10 @@ void main() {
     expect(result.skipReason, contains('illiquid'));
   });
 
-  test('liquid ADV still fires BUY with climax and illiquid gates on', () {
+  test('liquid ADV still fires BUY with illiquid gate on', () {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
-      const Ema10CrossFilterParams(
-        requireSupertrend: false,
-        skipDefensive: false,
-      ),
+      const Ema10CrossFilterParams(),
     );
     expect(result!.setupActive, isTrue);
     expect(result.signal, SignalType.buy);
@@ -261,9 +254,8 @@ void main() {
     final result = Ema10CrossIndicator.calculate(
       spiked,
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
-        skipDefensive: false,
+        skipClimaxVolume: true,
       ),
     );
     expect(result!.setupActive, isFalse);
@@ -274,9 +266,8 @@ void main() {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
-        skipClimaxVolume: false,
+        skipDefensive: true,
       ),
       symbol: 'HDFCLIFE',
     );
@@ -287,7 +278,7 @@ void main() {
   test('SELL still fires when the name is illiquid', () {
     final result = Ema10CrossIndicator.calculate(
       _candles(_exitDumpCloses(dumpBars: 4), volume: 1000),
-      const Ema10CrossFilterParams(requireSupertrend: false),
+      const Ema10CrossFilterParams(),
     );
     expect(result!.exitActive, isTrue);
     expect(result.signal, SignalType.sell);
@@ -297,7 +288,6 @@ void main() {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
         skipClimaxVolume: false,
         skipDefensive: false,
@@ -314,7 +304,6 @@ void main() {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
         skipClimaxVolume: false,
         skipDefensive: false,
@@ -330,7 +319,6 @@ void main() {
     final result = Ema10CrossIndicator.calculate(
       _candles(_pullbackRecrossCloses(extraHoldBars: 6), volume: 20000000),
       const Ema10CrossFilterParams(
-        requireSupertrend: false,
         skipIlliquid: false,
         skipClimaxVolume: false,
         skipDefensive: false,
